@@ -176,22 +176,30 @@
         const [topLimiter, ...reusableTrs] = tbody.querySelectorAll(':scope > tr')
         const bottomLimiter = reusableTrs.pop()
         const rowTemplate = reusableTrs[0]
-        const trs = Array.from({length:n}, (_, i) =>
-            reusableTrs[i] ?? rowTemplate.cloneNode(true))
-        tbody.replaceChildren(topLimiter, ...trs, bottomLimiter)
+        const trs = [
+          topLimiter,
+          ...Array.from({length:n}, (_, i) =>
+            reusableTrs[i] ?? rowTemplate.cloneNode(true)),
+          bottomLimiter,
+        ]
+        tbody.replaceChildren(...trs)
 
         // create columns
         const gameTds = trs.map(tr => {
           const [leftLimiter, ...reusableTds] = tr.querySelectorAll(':scope > td')
           const rightLimiter = reusableTds.pop()
           const cellTemplate = reusableTds[0]
-          const tds = Array.from({length:m}, (_,i) =>
-              reusableTds[i] ?? cellTemplate.cloneNode(true))
-          tr.replaceChildren(leftLimiter, ...tds, rightLimiter)
-          return tds
+          const tds = [
+            leftLimiter,
+            ...Array.from({length:m}, (_,i) =>
+              reusableTds[i] ?? cellTemplate.cloneNode(true)),
+            rightLimiter,
+          ]
+          tr.replaceChildren(...tds)
+          return tds.slice(1, -1)
         })
 
-        return gameTds
+        return gameTds.slice(1, -1)
       },
 
       updateInfo() {
