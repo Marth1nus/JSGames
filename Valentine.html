@@ -30,7 +30,7 @@
           ]
           const nextImage = async () => {
             this.dom.icon = imgs[imageIndex++] ?? imgs[imageIndex = 0]
-            setTimeout(nextImage, 4000, )
+            setTimeout(nextImage, 4000)
           }
           nextImage()
           if (music.wiiSports.paused) {
@@ -110,9 +110,9 @@
       justify-content: space-around;
       margin: 4vmin;
     }
+
     .question {
-      outline: 1vmin solid pink;
-      outline-style: double;
+      outline: 1vmin double pink;
       padding: 2vmin;
       border-radius: 8vmin;
       font-size: 4vmin;
