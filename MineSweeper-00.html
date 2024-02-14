@@ -265,7 +265,7 @@
         <button onclick="reset_game()">Reset</button>
       </aside>
     </header>
-    <table>
+    <table oncontextmenu="event.preventDefault()">
       <tbody id="board"></tbody>
       <script>reset_game(32,32,200)</script>
     </table>
