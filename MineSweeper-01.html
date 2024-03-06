@@ -102,6 +102,7 @@
       },
 
       dig(cell, testEnd=true) {
+        if (cell.isFlagged) { return }
         const wasRevealed = cell.isRevealed
         cell.isRevealed = true
 
@@ -170,10 +171,10 @@
       get gameDiv() { return document.getElementById('MineSweeperGame') },
       buildDomElements(n, m) {
         const game = this.gameDiv
-        const tbody = game.querySelector(':scope > table > tbody')
+        const tbody = game.querySelector(':scope>table>tbody')
 
         // create rows
-        const [topLimiter, ...reusableTrs] = tbody.querySelectorAll(':scope > tr')
+        const [topLimiter, ...reusableTrs] = tbody.querySelectorAll(':scope>tr')
         const bottomLimiter = reusableTrs.pop()
         const rowTemplate = reusableTrs[0]
         const trs = [
@@ -186,7 +187,7 @@
 
         // create columns
         const gameTds = trs.map(tr => {
-          const [leftLimiter, ...reusableTds] = tr.querySelectorAll(':scope > td')
+          const [leftLimiter, ...reusableTds] = tr.querySelectorAll(':scope>td')
           const rightLimiter = reusableTds.pop()
           const cellTemplate = reusableTds[0]
           const tds = [
@@ -207,7 +208,7 @@
           totalBombs,
           flaggedBombs,
         ] = this.gameDiv
-          .querySelector(':scope > header > table > tbody')
+          .querySelector(':scope>header>table>tbody')
           .querySelectorAll('td')
         totalBombs.textContent = this.cells.filter(c => c.isBomb).length
         flaggedBombs.textContent = this.cells.filter(c => c.isFlagged).length
@@ -219,8 +220,8 @@
     }
   </script>
   <style>
-    .height-limiter > div { overflow: hidden; width: 0; }
-    .width-limiter > td > div { overflow: hidden; height: 0; }
+    .height-limiter div { overflow: hidden; width: 0; }
+    .width-limiter div { overflow: hidden; height: 0; }
 
     .cell {
       outline: 1px solid gray;
@@ -250,7 +251,7 @@
       height: fit-content;
     }
 
-    #MineSweeperGame > header {
+    #MineSweeperGame>header {
       display: flex;
       flex-direction: row;
       justify-content: space-around;
@@ -258,9 +259,7 @@
       max-width: 100vw;
     }
 
-    #MineSweeperGame > header > table {
-      text-align: right;
-    }
+    #MineSweeperGame>header table { text-align: right; }
   </style>
 </head>
 <body>
@@ -274,36 +273,20 @@
       </table>
       <button onclick="mineSweeperGame.reset()">Reset</button>
     </header>
-    <table oncontextmenu="event.preventDefault()">
-      <tbody>
-        <tr class="width-limiter">
-          <td></td>
-          <td><div>🟫</div></td>
-          <td></td>
-        </tr>
-        <tr>
-          <td class="height-limiter"><div>🟫</div></td>
-          <td class="cell"
-            onclick="
-              event.preventDefault()
-              mineSweeperGame.dig(event.target.gameCell)
-            "
-            oncontextmenu="
-              event.preventDefault()
-              mineSweeperGame.flag(event.target.gameCell)
-            "
-          >
-          💣
-          </td>
-          <td class="height-limiter"><div>🟫</div></td>
-        </tr>
-        <tr class="width-limiter">
-          <td></td>
-          <td><div>🟫</div></td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
+    <table oncontextmenu="event.preventDefault()"><tbody>
+      <tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
+      <tr>
+        <td class="height-limiter"><div>🟫</div></td>
+        <td class="cell"
+          onclick      ="mineSweeperGame.dig (event.target.gameCell) ;event.preventDefault()"
+          oncontextmenu="mineSweeperGame.flag(event.target.gameCell) ;event.preventDefault()"
+        >
+        💣
+        </td>
+        <td class="height-limiter"><div>🟫</div></td>
+      </tr>
+      <tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
+    </tbody></table>
   </div>
   <script>
     mineSweeperGame.reset(32,32,200)
