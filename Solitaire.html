@@ -214,18 +214,15 @@
 									? cardI === 0 //                        |				entire source being moved
 									: false //                              |			else false
 								: false //                                |		else false
-							: suits.includes(destination) //            |	else if destination is a suit
-							? cardD.suit === destination //             |		if card suit is destination
-								? topCard //                              |			if there is a top card in the destination
-									? cardD.rankI === topCardD.rankI + 1 // |				ascending card rank
-									: cardD.rank === ranks.at(-0) //        |			else starts with Ace
-								: false //                                |		else false
+							: destination === cardD.suit //             |	else if destination is card suit
+							? topCard //                                |		if there is a top card in the destination
+								? cardD.rankI === topCardD.rankI + 1 //   |			ascending card rank
+								: cardD.rank === ranks.at(-0) //          |		else starts with Ace
 							: Number(destination) //                    |	else if destination is a number
-							? cardD.color !== topCardD.color //         |		if color alternating
-								? topCard //                              |			if there is a top card in the destination
-									? cardD.rankI === topCardD.rankI - 1 // |				descending card rank
-									: cardD.rank === ranks.at(-1) //        |			else start with King
-								: false //                                |		else false
+							? topCard //                                |		if there is a top card in the destination
+								? cardD.color !== topCardD.color && //    |			color alternating
+								  cardD.rankI === topCardD.rankI - 1 //   |			and descending card rank
+								: cardD.rank === ranks.at(-1) //          |		else start with King
 							: false //                                  |	else false
 					}
 				},
@@ -375,12 +372,15 @@
 				 */
 				function onReset() {
 					const { piles } = solitaire
-					moveCards(
+					moveElementsSmooth(
 						Object.entries(piles).map(([pileId, cardIds]) => ({
-							cards: cardIds.map(cardId => document.getElementById(cardId)),
+							elements: cardIds.map(cardId => document.getElementById(cardId)),
 							destination: document.getElementById(pileId),
 						})),
 					)
+					for (const card of document.querySelectorAll('.card')) {
+						card.classList.toggle('turned-over', false)
+					}
 					for (const card of document.querySelectorAll(
 						Object.keys(solitaire.piles)
 							.filter(Number)
@@ -405,51 +405,57 @@
 					const sourceCards = [...source.querySelectorAll('.card')]
 					const sourceTopCards = sourceCards.splice(-cardIds.length * 2)
 					const cards = sourceTopCards.splice(-cardIds.length)
-					sourceTopCards.at(-1).classList.toggle('turned-over', false)
+					sourceTopCards.at(-1)?.classList.toggle('turned-over', false)
 					cards.forEach((_, i) => {
 						const idValid = cards[i].id === cardIds[i]
 						const sourceValid = cards[i].parentElement === source
 						if (idValid && sourceValid) return
 						throw new Error(`DOM de-sync`)
 					})
-					moveCards([
-						{ cards: sourceTopCards /*     */, destination: source /*     */ },
-						{ cards: destinationTopCards /**/, destination: destination /**/ },
-						{ cards: cards /*              */, destination: destination /**/ },
+					moveElementsSmooth([
+						{ elements: sourceTopCards /*     */, destination: source /*     */ },
+						{ elements: destinationTopCards /**/, destination: destination /**/ },
+						{ elements: cards /*              */, destination: destination /**/ },
 					])
 				}
 				/**
 				 * @this {any}
 				 */
 				function onEnd() {}
-				/**
+				/** Move elements to their destinations with animation
 				 * @this {any}
-				 * @param {{cards:HTMLElement[], destination:HTMLElement}[]} cardsToDestinations
+				 * @param {{elements:HTMLElement[], destination:HTMLElement}[]} moves
+				 * CSS changes for every element:
+				 * - .moving class applied
+				 * - --move-x set to the offset-x in px to get back to the position before moving
+				 * - --move-y set to the offset-y in px to get back to the position before moving
+				 * Property-and-class changes removed on animation end
+				 * Use .moving with --move-x and --move-y in CSS to style the animation
 				 */
-				function moveCards(cardsToDestinations) {
-					const cardsWithRects = cardsToDestinations.flatMap(({ cards }) =>
-						cards.map(card => ({
-							card, //
-							rect: card.getBoundingClientRect(),
+				function moveElementsSmooth(moves) {
+					const elementsWithRects = moves.flatMap(({ elements }) =>
+						elements.map(element => ({
+							element, //
+							rect: element.getBoundingClientRect(),
 						})),
 					)
-					for (const { cards, destination } of cardsToDestinations) {
-						destination.append(...cards)
+					for (const { elements, destination } of moves) {
+						destination.append(...elements)
 					}
-					for (const { card, rect: prevRect } of cardsWithRects) {
-						const currRect = card.getBoundingClientRect()
-						cardMoveBegin()
-						function cardMoveBegin() {
-							card.addEventListener('animationend', cardMoveEnd)
-							card.style.setProperty('--move-x', prevRect.left - currRect.left)
-							card.style.setProperty('--move-y', prevRect.top - currRect.top)
-							card.classList.toggle('moving', true)
+					for (const { element, rect: prevRect } of elementsWithRects) {
+						const currRect = element.getBoundingClientRect()
+						moveBegin()
+						function moveBegin() {
+							element.addEventListener('animationend', moveEnd)
+							element.style.setProperty('--move-x', prevRect.left - currRect.left)
+							element.style.setProperty('--move-y', prevRect.top - currRect.top)
+							element.classList.toggle('moving', true)
 						}
-						function cardMoveEnd() {
-							card.removeEventListener('animationend', cardMoveEnd)
-							card.style.removeProperty('--move-x')
-							card.style.removeProperty('--move-y')
-							card.classList.toggle('moving', false)
+						function moveEnd() {
+							element.removeEventListener('animationend', moveEnd)
+							element.style.removeProperty('--move-x')
+							element.style.removeProperty('--move-y')
+							element.classList.toggle('moving', false)
 						}
 					}
 				}
