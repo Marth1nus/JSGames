@@ -195,7 +195,13 @@
 								? ['peek'] //                               |				peek is the only valid destination
 								: [] //                                     |			else no valid destinations
 							: [] //                                       |		else no valid destinations
-						: ['peek', ...suits].includes(source) && // ... |	else if source is peek or a suit
+						: source === 'peek' && // ..................... |	else if source is a suit
+						  cardIBack !== -1 //                           |	and card is not the top of the pile
+						? piles['draw'].length === 0 && //              |		if draw pile is empty
+						  cardI === 0 //                                |		and the entire peek pile to be moved
+							? ['draw'] //                                 |			draw is the only valid destination
+							: [] //                                       |		else no valid destination
+						: suits.includes(source) && // ................ |	else if source is a suit
 						  cardIBack !== -1 //                           |	and card is not the top of the pile
 						? [] //                                         |		no valid destination
 						: pilePrefOrder // ............................ |	else filter all piles for a valid destination
@@ -206,10 +212,6 @@
 						const topCardD = this.cardDetails(topCard)
 						return destination === source // .............. |	if destination is source
 							? false //                                    |		false
-							: destination === 'draw' // ................. |	else if destination is draw
-							? piles['draw'].length === 0 && //            | 	draw pile empty
-							  source === 'peek' && //                     |		and source is peek
-							  cardI === 0 //                              |		and entire source being moved
 							: destination === cardD.suit && // .......... |	else if destination is card suit
 							  cardIBack === -1 //                         | and card is the top of the source
 							? topCard //                                  |		if there is a top card in the destination
