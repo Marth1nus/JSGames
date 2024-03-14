@@ -21,14 +21,24 @@
 				display: grid;
 				grid-column: span 3;
 				grid-template: auto auto / auto auto auto auto auto auto auto;
-				font-size: xx-large;
 				width: min-content;
 				height: min-content;
-				gap: 0.2em;
+				gap: 0.5em;
 			}
 			#solitaire .pile {
-				width: var(--card-width);
+				position: relative;
+				padding: 0;
+			}
+			#solitaire .pile::before {
+				content: attr(id);
+				display: block;
+				position: absolute;
+				text-align: center;
+				box-sizing: border-box;
+				left: 0;
+				right: 0;
 				height: var(--card-height);
+				box-sizing: border-box;
 				border: var(--card-border-width) solid #888;
 				border-radius: calc(var(--card-border-width) + var(--card-border-radius));
 			}
@@ -325,6 +335,9 @@
 			 */
 			function onDOMContentLoaded(event) {
 				// ============================================================================================================
+				for (const pile of document.querySelectorAll('.pile')) {
+					pile.classList.toggle(Number(pile.id) ? `p${pile.id}` : pile.id, true)
+				}
 				for (const card of document.querySelectorAll('.card')) {
 					card.addEventListener('click', onClickCard)
 					const [suit, rank] = card.id
@@ -508,7 +521,7 @@
 			<button onclick="solitaire.moveUndo()" type="button">Undo</button>
 			<button onclick="solitaire.moveRedo()" type="button">Redo</button>
 			<div id="piles" class="piles">
-				<div id="♠" class="pile ♠">
+				<div id="♠" class="pile">
 					<div id="♠A" class="card"></div>
 					<div id="♠2" class="card"></div>
 					<div id="♠3" class="card"></div>
@@ -523,7 +536,7 @@
 					<div id="♠Q" class="card"></div>
 					<div id="♠K" class="card"></div>
 				</div>
-				<div id="♥" class="pile ♥">
+				<div id="♥" class="pile">
 					<div id="♥A" class="card"></div>
 					<div id="♥2" class="card"></div>
 					<div id="♥3" class="card"></div>
@@ -538,7 +551,7 @@
 					<div id="♥Q" class="card"></div>
 					<div id="♥K" class="card"></div>
 				</div>
-				<div id="♣" class="pile ♣">
+				<div id="♣" class="pile">
 					<div id="♣A" class="card"></div>
 					<div id="♣2" class="card"></div>
 					<div id="♣3" class="card"></div>
@@ -553,7 +566,7 @@
 					<div id="♣Q" class="card"></div>
 					<div id="♣K" class="card"></div>
 				</div>
-				<div id="♦" class="pile ♦">
+				<div id="♦" class="pile">
 					<div id="♦A" class="card"></div>
 					<div id="♦2" class="card"></div>
 					<div id="♦3" class="card"></div>
@@ -568,15 +581,15 @@
 					<div id="♦Q" class="card"></div>
 					<div id="♦K" class="card"></div>
 				</div>
-				<div id="draw" class="pile draw"></div>
-				<div id="peek" class="pile peek"></div>
-				<div id="1" class="pile p1"></div>
-				<div id="2" class="pile p2"></div>
-				<div id="3" class="pile p3"></div>
-				<div id="4" class="pile p4"></div>
-				<div id="5" class="pile p5"></div>
-				<div id="6" class="pile p6"></div>
-				<div id="7" class="pile p7"></div>
+				<div id="draw" class="pile"></div>
+				<div id="peek" class="pile"></div>
+				<div id="1" class="pile"></div>
+				<div id="2" class="pile"></div>
+				<div id="3" class="pile"></div>
+				<div id="4" class="pile"></div>
+				<div id="5" class="pile"></div>
+				<div id="6" class="pile"></div>
+				<div id="7" class="pile"></div>
 			</div>
 		</div>
 	</body>
