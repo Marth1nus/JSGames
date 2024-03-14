@@ -97,7 +97,7 @@
 				...['peek', 'draw'],
 			]
 			const solitaire = {
-				// ===== Data and Helpers =================================== Data and Helpers ========================
+				// ===== Data and Helpers =================================== Data and Helpers ================================
 				suits: solitaireSuits,
 				ranks: solitaireRanks,
 				pilePrefOrder: solitairePiles,
@@ -143,7 +143,7 @@
 					const color = suitI === -1 ? '' : suitI % 2 ? 'red' : 'black'
 					return { card: card.slice(0, 2), suit, rank, suitI, rankI, color, turnedOver: !!turnedOver }
 				},
-				// ===== Reset ============================================== Reset ===================================
+				// ===== Reset ============================================== Reset ===========================================
 				/**
 				 *
 				 */
@@ -171,7 +171,7 @@
 					}
 					return items
 				},
-				// ===== Move =============================================== Move ====================================
+				// ===== Move =============================================== Move ============================================
 				/**
 				 * @param {string} card
 				 * @param {string} source
@@ -187,44 +187,40 @@
 					if (cardI === -1) throw new Error(`card "${card}" is not from source "${source}"`)
 					const cardIBack = cardI - piles[source].length
 					const cardD = this.cardDetails(card)
-					const validDestinations =
-						source === 'draw' //                          |	if source is draw
-							? cardIBack === -peekLength //              |		if the last {peekLength} cards are to be moved
-								? ['peek'] //                             |			peek is the only valid destination
-								: piles[source].length < peekLength //    |		else if source has less than {peekLength} cards
-								? cardI === 0 //                          |			if the whole source is to be moved
-									? ['peek'] //                           |				peek is the only valid destination
-									: [] //                                 |			else no valid destinations
-								: [] //                                   |		else no valid destinations
-							: ['peek', ...suits].includes(source) && // | else if source is peek or a suit
-							  cardIBack !== -1 //                       | and card is not the top of the pile
-							? [] //                                     |  no valid destination
-							: pilePrefOrder //                          |	else filter all piles in preference order for a valid destination
-									.filter(validDestination, this)
-					return validDestinations
+					return source === 'draw' // ..................... |	if source is draw
+						? cardIBack === -peekLength //                  |		if the last {peekLength} cards are to be moved
+							? ['peek'] //                                 |			peek is the only valid destination
+							: piles[source].length < peekLength //        |		else if source has less than {peekLength} cards
+							? cardI === 0 //                              |			if the whole source is to be moved
+								? ['peek'] //                               |				peek is the only valid destination
+								: [] //                                     |			else no valid destinations
+							: [] //                                       |		else no valid destinations
+						: ['peek', ...suits].includes(source) && // ... |	else if source is peek or a suit
+						  cardIBack !== -1 //                           |	and card is not the top of the pile
+						? [] //                                         |		no valid destination
+						: pilePrefOrder // ............................ |	else filter all piles for a valid destination
+								.filter(validDestination, this)
 					/**@param {string} destination*/
 					function validDestination(destination) {
 						const topCard = piles[destination].at(-1) ?? ''
 						const topCardD = this.cardDetails(topCard)
-						return destination === source //              |	if destination is source
-							? false //                                  |		false
-							: destination === 'draw' //                 |	else if destination is draw
-							? source === 'peek' //                      |		if source is peek
-								? piles['draw'].length === 0 //           | 		if draw pile empty
-									? cardI === 0 //                        |				entire source being moved
-									: false //                              |			else false
-								: false //                                |		else false
-							: destination === cardD.suit && //          |	else if destination is card suit
-							  cardIBack === -1 //                       | and card is the top of the source
-							? topCard //                                |		if there is a top card in the destination
-								? cardD.rankI === topCardD.rankI + 1 //   |			ascending card rank
-								: cardD.rank === ranks.at(-0) //          |		else starts with Ace
-							: Number(destination) && //                 |	else if destination is a number
-							  cardD.color !== topCardD.color //         |	and color alternating
-							? topCard //                                |		if there is a top card in the destination
-								? cardD.rankI === topCardD.rankI - 1 //   |			descending card rank
-								: cardD.rank === ranks.at(-1) //          |		else start with King
-							: false //                                  |	else false
+						return destination === source // .............. |	if destination is source
+							? false //                                    |		false
+							: destination === 'draw' // ................. |	else if destination is draw
+							? piles['draw'].length === 0 && //            | 	draw pile empty
+							  source === 'peek' && //                     |		and source is peek
+							  cardI === 0 //                              |		and entire source being moved
+							: destination === cardD.suit && // .......... |	else if destination is card suit
+							  cardIBack === -1 //                         | and card is the top of the source
+							? topCard //                                  |		if there is a top card in the destination
+								? cardD.rankI === topCardD.rankI + 1 //     |			ascending card rank
+								: cardD.rank === ranks.at(-0) //            |		else starts with Ace
+							: Number(destination) && // ................. |	else if destination is a number
+							  cardD.color !== topCardD.color //           |	and color alternating
+							? topCard //                                  |		if there is a top card in the destination
+								? cardD.rankI === topCardD.rankI - 1 //     |			descending card rank
+								: cardD.rank === ranks.at(-1) //            |		else start with King
+							: false // .................................. |	else false
 					}
 				},
 				/**
@@ -264,7 +260,7 @@
 						: ['peek', 'draw', 0]
 					return this.move(piles[source].slice(cardI)[0], source, destination)
 				},
-				// ===== End ================================================ End =====================================
+				// ===== End ================================================ End =============================================
 				ended() {
 					const { suits, piles } = this
 					return Object.keys(piles).every(pile => suits.includes(pile) || !piles[pile].length)
@@ -276,7 +272,7 @@
 					const { onEnd } = this
 					onEnd.call(this)
 				},
-				// ===== Events ============================================= Events ==================================
+				// ===== Events ============================================= Events ==========================================
 				/**
 				 * @param {string[]} cards
 				 * @param {string} source
@@ -286,12 +282,12 @@
 				onMove: function (cards, source, destination, type) {},
 				onReset: function () {},
 				onEnd: function () {},
-				// ====================================================================================================
+				// ============================================================================================================
 			}
 		</script>
 		<script>
 			document.addEventListener('DOMContentLoaded', event => {
-				// ====================================================================================================
+				// ============================================================================================================
 				for (const card of document.querySelectorAll('.card')) {
 					card.addEventListener('click', onClickCard)
 					card.draggable = true
@@ -305,7 +301,7 @@
 				solitaire.onEnd = onEnd
 				solitaire.reset()
 				return
-				// ====================================================================================================
+				// ============================================================================================================
 				/**
 				 * @this {HTMLElement}
 				 * @param {MouseEvent} event
@@ -447,20 +443,19 @@
 						const currRect = element.getBoundingClientRect()
 						moveBegin()
 						function moveBegin() {
-							element.addEventListener('animationend', moveEnd)
+							element.addEventListener('animationend', moveEnd, { once: true })
 							element.style.setProperty('--move-x', prevRect.left - currRect.left)
 							element.style.setProperty('--move-y', prevRect.top - currRect.top)
 							element.classList.toggle('moving', true)
 						}
 						function moveEnd() {
-							element.removeEventListener('animationend', moveEnd)
 							element.style.removeProperty('--move-x')
 							element.style.removeProperty('--move-y')
 							element.classList.toggle('moving', false)
 						}
 					}
 				}
-				// ====================================================================================================
+				// ============================================================================================================
 			})
 		</script>
 	</head>
