@@ -71,9 +71,11 @@
 				position: absolute;
 				z-index: -1;
 			}
-			#solitaire .pile.draw .card {
+			#solitaire .pile.draw .card,
+			#solitaire .pile .card.turned-over {
 				pointer-events: none;
 				color: transparent;
+				transition: 0.2s;
 			}
 			@keyframes move {
 				from {
@@ -379,6 +381,14 @@
 							destination: document.getElementById(pileId),
 						})),
 					)
+					for (const card of document.querySelectorAll(
+						Object.keys(solitaire.piles)
+							.filter(Number)
+							.map(i => `#solitaire .pile.p${i} .card:not(:last-of-type)`)
+							.join(','),
+					)) {
+						card.classList.toggle('turned-over', true)
+					}
 				}
 				/**
 				 * @this {any}
@@ -395,6 +405,7 @@
 					const sourceCards = [...source.querySelectorAll('.card')]
 					const sourceTopCards = sourceCards.splice(-cardIds.length * 2)
 					const cards = sourceTopCards.splice(-cardIds.length)
+					sourceTopCards.at(-1).classList.toggle('turned-over', false)
 					cards.forEach((_, i) => {
 						const idValid = cards[i].id === cardIds[i]
 						const sourceValid = cards[i].parentElement === source
