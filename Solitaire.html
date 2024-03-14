@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Solitaire</title>
+		<style>
+			#solitaire {
+				--card-width: 3em;
+				--card-height: 5em;
+				gap: 1em;
+			}
+			#solitaire .piles {
+				display: grid;
+				grid-template: auto auto / auto auto auto auto auto auto auto;
+				width: min-content;
+				gap: 5px;
+			}
+			#solitaire .pile {
+				width: var(--card-width);
+				height: var(--card-height);
+				border: 1px solid #888;
+				border-radius: 5px;
+			}
+			#solitaire .pile.peek {
+				width: unset;
+				min-width: var(--card-width);
+				grid-column: span 2;
+				display: flex;
+				flex-direction: row;
+			}
+			#solitaire .card {
+				--card-padding: 0.2em;
+				padding: var(--card-padding);
+				width: calc(var(--card-width) - 2 * var(--card-padding));
+				-webkit-user-select: none;
+				user-select: none;
+				text-align: left;
+			}
+			#solitaire .card::after {
+				content: '';
+				display: block;
+				background: radial-gradient(black, gray);
+				border: 1px solid black;
+				border-radius: 4px;
+				margin-top: calc(var(--card-padding) * -2 - 1em);
+				margin-left: calc(var(--card-padding) * -1);
+				width: calc(var(--card-width) - 2px);
+				height: calc(var(--card-height) - 2px);
+			}
+			#solitaire .card.♠,
+			#solitaire .card.♣ {
+				color: black;
+			}
+			#solitaire .card.♥,
+			#solitaire .card.♦ {
+				color: red;
+			}
+			#solitaire .pile .card:not(:last-of-type) {
+				height: calc(var(--card-height) / 5);
+			}
+			#solitaire .pile.peek .card:not(:last-of-type) {
+				width: calc(var(--card-width) / 2.28);
+			}
+			#solitaire .pile.♠ .card:not(:last-of-type),
+			#solitaire .pile.♥ .card:not(:last-of-type),
+			#solitaire .pile.♣ .card:not(:last-of-type),
+			#solitaire .pile.♦ .card:not(:last-of-type),
+			#solitaire .pile.draw .card:not(:last-of-type),
+			#solitaire .pile.peek .card:not(:nth-last-of-type(-n + 3)) {
+				position: absolute;
+				z-index: -1;
+			}
+			#solitaire .pile.draw .card {
+				pointer-events: none;
+				color: transparent;
+			}
+			@keyframes move {
+				from {
+					transform: translate(calc(var(--move-x) * 1px), calc(var(--move-y) * 1px));
+				}
+			}
+			#solitaire .moving {
+				animation: move 0.2s ease-in-out forwards;
+				z-index: 10;
+			}
+		</style>
+		<script>
+			const solitaireSuits = '♠♥♣♦'
+			const solitaireRanks = 'A23456789XJQK'
+			const solitairePeekLength = 3
+			const solitairePiles = [
+				...solitaireSuits,
+				...Array.from({ length: 7 }, (_, i) => String(1 + i)),
+				...['peek', 'draw'],
+			]
+			const solitaire = {
+				// ===== Data and Helpers =================================== Data and Helpers ========================
+				suits: solitaireSuits,
+				ranks: solitaireRanks,
+				pilePrefOrder: solitairePiles,
+				peekLength: solitairePeekLength,
+				piles: Object.fromEntries(solitairePiles.map(pile => [pile, [''].slice(1)])),
+				history: {
+					undoMoves: [['']].slice(1),
+					redoMoves: [['']].slice(1),
+					/**
+					 * @param {string} card
+					 * @param {string} source
+					 * @param {string} destination
+					 */
+					push(card, source, destination) {
+						this.redoMoves = [[card, source, destination]]
+						return this.redo()
+					},
+					redo() {
+						const move = this.redoMoves.pop()
+						if (move) this.undoMoves.push(move)
+						return move
+					},
+					undo() {
+						const move = this.undoMoves.pop()
+						if (move) this.redoMoves.push(move)
+						return move
+					},
+				},
+				allCardsGroupBySuit() {
+					return Array.from(this.suits, suit => Array.from(this.ranks, rank => `${suit}${rank}`))
+				},
+				allCards() {
+					return this.allCardsGroupBySuit().flat()
+				},
+				/**
+				 * @param {string} card
+				 */
+				cardDetails(card) {
+					const { suits, ranks } = this
+					const [suit, rank] = card
+					const color = suits.indexOf(suit) % 2 ? 'red' : 'black'
+					const rankI = ranks.indexOf(rank) + 1
+					return { card, suit, rank, color, rankI }
+				},
+				// ===== Reset ============================================== Reset ===================================
+				/**
+				 *
+				 */
+				reset() {
+					const { suits, ranks, piles, history, onReset, shuffle } = this
+					for (const pile in piles) piles[pile] = []
+					const drawPile = (piles['draw'] = shuffle(this.allCards()))
+					for (let i = 1; i <= 7; i++) {
+						for (let j = i; j <= 7; j++) {
+							piles[j].push(drawPile.pop())
+						}
+					}
+					history.undoMoves = []
+					history.redoMoves = []
+					onReset.call(this)
+				},
+				/** Shuffle an array in place
+				 * @param {string[]} items
+				 * @param {undefined} this
+				 */
+				shuffle(items) {
+					for (let i = items.length - 1; i > 0; i--) {
+						const j = Math.floor(Math.random() * (i + 1))
+						;[items[i], items[j]] = [items[j], items[i]]
+					}
+					return items
+				},
+				// ===== Move =============================================== Move ====================================
+				/**
+				 * @param {string} card
+				 * @param {string} source
+				 * @returns {string[]} - valid pile names
+				 * Implicit Validations (throw on fail):
+				 *  source is in piles
+				 *  card is in source
+				 */
+				validDestinations(card, source) {
+					const cardDetails = card => this.cardDetails(card)
+					const { suits, ranks, pilePrefOrder, peekLength, piles } = this
+					if (!piles[source]) throw new Error(`source "${source}" is not a pile`)
+					const cardI = piles[source].indexOf(card)
+					if (cardI === -1) throw new Error(`card "${card}" is not from source "${source}"`)
+					const cardIBack = cardI - piles[source].length
+					const cardD = cardDetails(card)
+					const validDestinations =
+						source === 'draw' //                          |	if source is draw
+							? cardIBack === -peekLength //              |		if the last {peekLength} cards are to be moved
+								? ['peek'] //                             |			peek is the only valid destination
+								: piles[source].length < peekLength //    |		else if source has less than {peekLength} cards
+								? cardI === 0 //                          |			if the whole source is to be moved
+									? ['peek'] //                           |				peek is the only valid destination
+									: [] //                                 |			else no valid destinations
+								: [] //                                   |		else no valid destinations
+							: ['peek', ...suits].includes(source) && // | else if source is peek or a suit
+							  cardIBack !== -1 //                       | and card is not the top of the pile
+							? [] //                                     |  no valid destination
+							: pilePrefOrder //                          |	else filter all piles in preference order for a valid destination
+									.filter(validDestination, this)
+					return validDestinations
+					/**@param {string} destination*/
+					function validDestination(destination) {
+						const topCard = piles[destination].at(-1) ?? ''
+						const topCardD = cardDetails(topCard)
+						return destination === source //              |	if destination is source
+							? false //                                  |		false
+							: destination === 'draw' //                 |	else if destination is draw
+							? source === 'peek' //                      |		if source is peek
+								? piles['draw'].length === 0 //           | 		if draw pile empty
+									? cardI === 0 //                        |				entire source being moved
+									: false //                              |			else false
+								: false //                                |		else false
+							: suits.includes(destination) //            |	else if destination is a suit
+							? cardD.suit === destination //             |		if card suit is destination
+								? topCard //                              |			if there is a top card in the destination
+									? cardD.rankI === topCardD.rankI + 1 // |				ascending card rank
+									: cardD.rank === ranks.at(-0) //        |			else starts with Ace
+								: false //                                |		else false
+							: Number(destination) //                    |	else if destination is a number
+							? cardD.color !== topCardD.color //         |		if color alternating
+								? topCard //                              |			if there is a top card in the destination
+									? cardD.rankI === topCardD.rankI - 1 // |				descending card rank
+									: cardD.rank === ranks.at(-1) //        |			else start with King
+								: false //                                |		else false
+							: false //                                  |	else false
+					}
+				},
+				/**
+				 * @param {string} card
+				 * @param {string} source
+				 * @param {string} [destination] = validDestinations[0]
+				 * @param {'push'|'redo'|'undo'} [type] = 'push'
+				 * @returns {string[]|false} - cards moved or false
+				 */
+				move(card, source, destination, type = 'push') {
+					const { suits, ranks, piles, history, onMove } = this
+					if (false);
+					else if (type === 'redo') [card, source, destination] = history.redoMoves.at(-1)
+					else if (type === 'undo') [card, destination, source] = history.undoMoves.at(-1)
+					else if (type !== 'push') throw new Error(`Invalid move type "${type}"`)
+					const validDestinations = type === 'undo' ? [destination] : this.validDestinations(card, source)
+					if (!(destination ??= validDestinations[0])) return false
+					if (!validDestinations.includes(destination)) return false
+					const cardI = piles[source].indexOf(card)
+					const cards = piles[source].splice(cardI)
+					piles[destination].push(...cards)
+					history[type](card, source, destination)
+					onMove.call(this, cards, source, destination, type)
+					if (suits.includes(destination) && this.ended()) this.end()
+					return cards
+				},
+				moveRedo() {
+					return this.move(undefined, undefined, undefined, 'redo')
+				},
+				moveUndo() {
+					return this.move(undefined, undefined, undefined, 'undo')
+				},
+				moveDraw() {
+					const { peekLength, piles } = this
+					const [source, destination, cardI] = piles['draw'].length //
+						? ['draw', 'peek', -peekLength]
+						: ['peek', 'draw', 0]
+					return this.move(piles[source].slice(cardI)[0], source, destination)
+				},
+				// ===== End ================================================ End =====================================
+				ended() {
+					const { suits, piles } = this
+					return Object.keys(piles).every(pile => suits.includes(pile) || !piles[pile].length)
+				},
+				/**
+				 *
+				 */
+				end() {
+					const { onEnd } = this
+					onEnd.call(this)
+				},
+				// ===== Events ============================================= Events ==================================
+				/**
+				 * @param {string[]} cards
+				 * @param {string} source
+				 * @param {string} destination
+				 * @param {'push'|'redo'|'undo'} type
+				 */
+				onMove: function (cards, source, destination, type) {},
+				onReset: function () {},
+				onEnd: function () {},
+				// ====================================================================================================
+			}
+		</script>
+		<script>
+			document.addEventListener('DOMContentLoaded', event => {
+				// ====================================================================================================
+				for (const card of document.querySelectorAll('.card')) {
+					card.addEventListener('click', onClickCard)
+					card.draggable = true
+				}
+				document.getElementById('draw').addEventListener('click', onClickDraw)
+				document.addEventListener('dragstart', onDragStart)
+				document.addEventListener('dragover', onDragOver)
+				document.addEventListener('drop', onDrop)
+				solitaire.onReset = onReset
+				solitaire.onMove = onMove
+				solitaire.onEnd = onEnd
+				solitaire.reset()
+				return
+				// ====================================================================================================
+				/**
+				 * @this {HTMLElement}
+				 * @param {MouseEvent} event
+				 */
+				function onClickCard(event) {
+					/**@type {HTMLElement}*/
+					const card = event.target
+					const source = card.parentElement
+					const validDestinationIds = solitaire.validDestinations(card.id, source.id)
+					const destinationId = validDestinationIds[0]
+					const destination = document.getElementById(destinationId)
+					if (!destination) return
+					solitaire.move(card.id, source.id, destination.id)
+				}
+				/**
+				 * @this {HTMLElement}
+				 * @param {MouseEvent} event
+				 */
+				function onClickDraw(event) {
+					solitaire.moveDraw()
+				}
+				/**
+				 * @this {Document}
+				 * @param {DragEvent} event
+				 */
+				function onDragStart(event) {
+					/**@type {HTMLElement}*/
+					const card = event.target
+					if (!card.classList.contains('card')) return
+					const source = card.parentElement
+					if (!source.classList.contains('pile')) return
+					const eventData = `${card.id}:${solitaire.validDestinations(card.id, source.id).join(',')}`
+					event.dataTransfer.setData('text/plain', eventData)
+				}
+				/**
+				 * @this {Document}
+				 * @param {DragEvent} event
+				 */
+				function onDragOver(event) {
+					event.preventDefault()
+				}
+				/**
+				 * @this {Document}
+				 * @param {DragEvent} event
+				 */
+				function onDrop(event) {
+					/**@type {HTMLElement}*/
+					const destination = undefined
+						? undefined
+						: event.target.classList.contains('pile')
+						? event.target
+						: event.target.classList.contains('card')
+						? event.target.parentElement
+						: undefined
+					if (!destination?.classList.contains('pile')) return
+					const [cardId, validDestinationIdsText] = event.dataTransfer.getData('text/plain').split(':')
+					const validDestinationIds = validDestinationIdsText.split(',')
+					if (!validDestinationIds.includes(destination.id)) return
+					const card = document.getElementById(cardId)
+					const source = card.parentElement
+					solitaire.move(card.id, source.id, destination.id)
+				}
+				/**
+				 * @this {any}
+				 */
+				function onReset() {
+					const { piles } = solitaire
+					moveCards(
+						Object.entries(piles).map(([pileId, cardIds]) => ({
+							cards: cardIds.map(cardId => document.getElementById(cardId)),
+							destination: document.getElementById(pileId),
+						})),
+					)
+				}
+				/**
+				 * @this {any}
+				 * @param {string[]} cardIds
+				 * @param {string} sourceId
+				 * @param {string} destinationId
+				 * @param {'push'|'redo'|'undo'} type
+				 */
+				function onMove(cardIds, sourceId, destinationId, type) {
+					const source = document.getElementById(sourceId)
+					const destination = document.getElementById(destinationId)
+					const destinationCards = [...destination.querySelectorAll('.card')]
+					const destinationTopCards = destinationCards.splice(-cardIds.length)
+					const sourceCards = [...source.querySelectorAll('.card')]
+					const sourceTopCards = sourceCards.splice(-cardIds.length * 2)
+					const cards = sourceTopCards.splice(-cardIds.length)
+					cards.forEach((_, i) => {
+						const idValid = cards[i].id === cardIds[i]
+						const sourceValid = cards[i].parentElement === source
+						if (idValid && sourceValid) return
+						throw new Error(`DOM de-sync`)
+					})
+					moveCards([
+						{ cards: sourceTopCards /*     */, destination: source /*     */ },
+						{ cards: destinationTopCards /**/, destination: destination /**/ },
+						{ cards: cards /*              */, destination: destination /**/ },
+					])
+				}
+				/**
+				 * @this {any}
+				 */
+				function onEnd() {}
+				/**
+				 * @this {any}
+				 * @param {{cards:HTMLElement[], destination:HTMLElement}[]} cardsToDestinations
+				 */
+				function moveCards(cardsToDestinations) {
+					const cardsWithRects = cardsToDestinations.flatMap(({ cards }) =>
+						cards.map(card => ({
+							card, //
+							rect: card.getBoundingClientRect(),
+						})),
+					)
+					for (const { cards, destination } of cardsToDestinations) {
+						destination.append(...cards)
+					}
+					for (const { card, rect: prevRect } of cardsWithRects) {
+						const currRect = card.getBoundingClientRect()
+						cardMoveBegin()
+						function cardMoveBegin() {
+							card.addEventListener('animationend', cardMoveEnd)
+							card.style.setProperty('--move-x', prevRect.left - currRect.left)
+							card.style.setProperty('--move-y', prevRect.top - currRect.top)
+							card.classList.toggle('moving', true)
+						}
+						function cardMoveEnd() {
+							card.removeEventListener('animationend', cardMoveEnd)
+							card.style.removeProperty('--move-x')
+							card.style.removeProperty('--move-y')
+							card.classList.toggle('moving', false)
+						}
+					}
+				}
+				// ====================================================================================================
+			})
+		</script>
+	</head>
+	<body>
+		<div id="solitaire">
+			<button onclick="solitaire.reset()" type="button">Reset</button>
+			<button onclick="solitaire.moveUndo()" type="button">Undo</button>
+			<button onclick="solitaire.moveRedo()" type="button">Redo</button>
+			<div id="piles" class="piles">
+				<div id="♠" class="pile ♠">
+					<div id="♠A" class="card ♠ rA">♠A</div>
+					<div id="♠2" class="card ♠ r2">♠2</div>
+					<div id="♠3" class="card ♠ r3">♠3</div>
+					<div id="♠4" class="card ♠ r4">♠4</div>
+					<div id="♠5" class="card ♠ r5">♠5</div>
+					<div id="♠6" class="card ♠ r6">♠6</div>
+					<div id="♠7" class="card ♠ r7">♠7</div>
+					<div id="♠8" class="card ♠ r8">♠8</div>
+					<div id="♠9" class="card ♠ r9">♠9</div>
+					<div id="♠X" class="card ♠ rX">♠10</div>
+					<div id="♠J" class="card ♠ rJ">♠J</div>
+					<div id="♠Q" class="card ♠ rQ">♠Q</div>
+					<div id="♠K" class="card ♠ rK">♠K</div>
+				</div>
+				<div id="♥" class="pile ♥">
+					<div id="♥A" class="card ♥ rA">♥A</div>
+					<div id="♥2" class="card ♥ r2">♥2</div>
+					<div id="♥3" class="card ♥ r3">♥3</div>
+					<div id="♥4" class="card ♥ r4">♥4</div>
+					<div id="♥5" class="card ♥ r5">♥5</div>
+					<div id="♥6" class="card ♥ r6">♥6</div>
+					<div id="♥7" class="card ♥ r7">♥7</div>
+					<div id="♥8" class="card ♥ r8">♥8</div>
+					<div id="♥9" class="card ♥ r9">♥9</div>
+					<div id="♥X" class="card ♥ rX">♥10</div>
+					<div id="♥J" class="card ♥ rJ">♥J</div>
+					<div id="♥Q" class="card ♥ rQ">♥Q</div>
+					<div id="♥K" class="card ♥ rK">♥K</div>
+				</div>
+				<div id="♣" class="pile ♣">
+					<div id="♣A" class="card ♣ rA">♣A</div>
+					<div id="♣2" class="card ♣ r2">♣2</div>
+					<div id="♣3" class="card ♣ r3">♣3</div>
+					<div id="♣4" class="card ♣ r4">♣4</div>
+					<div id="♣5" class="card ♣ r5">♣5</div>
+					<div id="♣6" class="card ♣ r6">♣6</div>
+					<div id="♣7" class="card ♣ r7">♣7</div>
+					<div id="♣8" class="card ♣ r8">♣8</div>
+					<div id="♣9" class="card ♣ r9">♣9</div>
+					<div id="♣X" class="card ♣ rX">♣10</div>
+					<div id="♣J" class="card ♣ rJ">♣J</div>
+					<div id="♣Q" class="card ♣ rQ">♣Q</div>
+					<div id="♣K" class="card ♣ rK">♣K</div>
+				</div>
+				<div id="♦" class="pile ♦">
+					<div id="♦A" class="card ♦ rA">♦A</div>
+					<div id="♦2" class="card ♦ r2">♦2</div>
+					<div id="♦3" class="card ♦ r3">♦3</div>
+					<div id="♦4" class="card ♦ r4">♦4</div>
+					<div id="♦5" class="card ♦ r5">♦5</div>
+					<div id="♦6" class="card ♦ r6">♦6</div>
+					<div id="♦7" class="card ♦ r7">♦7</div>
+					<div id="♦8" class="card ♦ r8">♦8</div>
+					<div id="♦9" class="card ♦ r9">♦9</div>
+					<div id="♦X" class="card ♦ rX">♦10</div>
+					<div id="♦J" class="card ♦ rJ">♦J</div>
+					<div id="♦Q" class="card ♦ rQ">♦Q</div>
+					<div id="♦K" class="card ♦ rK">♦K</div>
+				</div>
+				<div id="draw" class="pile draw"></div>
+				<div id="peek" class="pile peek"></div>
+				<div id="1" class="pile p1"></div>
+				<div id="2" class="pile p2"></div>
+				<div id="3" class="pile p3"></div>
+				<div id="4" class="pile p4"></div>
+				<div id="5" class="pile p5"></div>
+				<div id="6" class="pile p6"></div>
+				<div id="7" class="pile p7"></div>
+			</div>
+		</div>
+	</body>
+</html>
