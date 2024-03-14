@@ -288,7 +288,12 @@
 			}
 		</script>
 		<script>
-			document.addEventListener('DOMContentLoaded', event => {
+			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
+			/**
+			 * @this {Document}
+			 * @param {Event} event
+			 */
+			function onDOMContentLoaded(event) {
 				// ============================================================================================================
 				for (const card of document.querySelectorAll('.card')) {
 					card.addEventListener('click', onClickCard)
@@ -458,7 +463,7 @@
 					}
 				}
 				// ============================================================================================================
-			})
+			}
 		</script>
 	</head>
 	<body>
