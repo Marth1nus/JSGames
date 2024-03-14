@@ -8,19 +8,29 @@
 			#solitaire {
 				--card-width: 3em;
 				--card-height: 5em;
+				--card-padding: 0.2em;
+				--card-border-radius: 0.4em;
+				--card-border-width: 0.1em;
+				display: grid;
+				grid-template: auto auto / auto auto auto;
+				justify-content: center;
+				align-items: center;
 				gap: 1em;
 			}
 			#solitaire .piles {
 				display: grid;
+				grid-column: span 3;
 				grid-template: auto auto / auto auto auto auto auto auto auto;
+				font-size: xx-large;
 				width: min-content;
-				gap: 5px;
+				height: min-content;
+				gap: 0.2em;
 			}
 			#solitaire .pile {
 				width: var(--card-width);
 				height: var(--card-height);
-				border: 1px solid #888;
-				border-radius: 5px;
+				border: var(--card-border-width) solid #888;
+				border-radius: calc(var(--card-border-width) + var(--card-border-radius));
 			}
 			#solitaire .pile.peek {
 				width: unset;
@@ -28,25 +38,39 @@
 				grid-column: span 2;
 				display: flex;
 				flex-direction: row;
+				justify-content: space-between;
 			}
 			#solitaire .card {
-				--card-padding: 0.2em;
-				padding: var(--card-padding);
-				width: calc(var(--card-width) - 2 * var(--card-padding));
 				-webkit-user-select: none;
 				user-select: none;
 				text-align: left;
+				position: relative;
+				box-sizing: border-box;
+				width: var(--card-width);
+				border-radius: var(--card-border-radius);
+				background: white;
+			}
+			#solitaire .card::before,
+			#solitaire .card::after {
+				background: inherit;
+				background-size: 10% 10%;
+				background-clip: border-box;
+				background-position: center;
+				content: attr(title);
+				color: inherit;
+				display: block;
+				border: var(--card-border-width) solid currentColor;
+				border-radius: inherit;
+				border-bottom-left-radius: 0;
+				border-bottom-right-radius: 0;
+				border-bottom: none;
+				width: var(--card-width);
+				height: calc(var(--card-height) / 2);
+				padding: var(--card-padding);
+				box-sizing: inherit;
 			}
 			#solitaire .card::after {
-				content: '';
-				display: block;
-				background: radial-gradient(black, gray);
-				border: 1px solid black;
-				border-radius: 4px;
-				margin-top: calc(var(--card-padding) * -2 - 1em);
-				margin-left: calc(var(--card-padding) * -1);
-				width: calc(var(--card-width) - 2px);
-				height: calc(var(--card-height) - 2px);
+				transform: scale(-1);
 			}
 			#solitaire .card.♠,
 			#solitaire .card.♣ {
@@ -54,13 +78,13 @@
 			}
 			#solitaire .card.♥,
 			#solitaire .card.♦ {
-				color: red;
+				color: #d00;
 			}
 			#solitaire .pile .card:not(:last-of-type) {
-				height: calc(var(--card-height) / 5);
+				height: calc(var(--card-padding) * 2 + 1.1em);
 			}
 			#solitaire .pile.peek .card:not(:last-of-type) {
-				width: calc(var(--card-width) / 2.28);
+				width: calc(var(--card-width) / 2);
 			}
 			#solitaire .pile.♠ .card:not(:last-of-type),
 			#solitaire .pile.♥ .card:not(:last-of-type),
@@ -69,13 +93,19 @@
 			#solitaire .pile.draw .card:not(:last-of-type),
 			#solitaire .pile.peek .card:not(:nth-last-of-type(-n + 3)) {
 				position: absolute;
-				z-index: -1;
 			}
 			#solitaire .pile.draw .card,
 			#solitaire .pile .card.turned-over {
+				background: linear-gradient(-30deg, white 40%, currentColor, white 60%);
+				border-color: black;
 				pointer-events: none;
-				color: transparent;
-				transition: 0.2s;
+				color: black;
+			}
+			#solitaire .pile .card.turned-over::before,
+			#solitaire .pile .card.turned-over::after,
+			#solitaire .pile.draw .card::before,
+			#solitaire .pile.draw .card::after {
+				content: '';
 			}
 			@keyframes move {
 				from {
@@ -297,6 +327,10 @@
 				// ============================================================================================================
 				for (const card of document.querySelectorAll('.card')) {
 					card.addEventListener('click', onClickCard)
+					const [suit, rank] = card.id
+					card.title = `${suit}${rank === 'X' ? 10 : rank}`
+					card.classList.toggle(suit, true)
+					card.classList.toggle(`r${rank}`, true)
 					card.draggable = true
 				}
 				document.getElementById('draw').addEventListener('click', onClickDraw)
@@ -425,7 +459,9 @@
 				/**
 				 * @this {any}
 				 */
-				function onEnd() {}
+				function onEnd() {
+					alert('win')
+				}
 				/** Move elements to their destinations with animation
 				 * @this {any}
 				 * @param {{elements:HTMLElement[], destination:HTMLElement}[]} moves
@@ -473,64 +509,64 @@
 			<button onclick="solitaire.moveRedo()" type="button">Redo</button>
 			<div id="piles" class="piles">
 				<div id="♠" class="pile ♠">
-					<div id="♠A" class="card ♠ rA">♠A</div>
-					<div id="♠2" class="card ♠ r2">♠2</div>
-					<div id="♠3" class="card ♠ r3">♠3</div>
-					<div id="♠4" class="card ♠ r4">♠4</div>
-					<div id="♠5" class="card ♠ r5">♠5</div>
-					<div id="♠6" class="card ♠ r6">♠6</div>
-					<div id="♠7" class="card ♠ r7">♠7</div>
-					<div id="♠8" class="card ♠ r8">♠8</div>
-					<div id="♠9" class="card ♠ r9">♠9</div>
-					<div id="♠X" class="card ♠ rX">♠10</div>
-					<div id="♠J" class="card ♠ rJ">♠J</div>
-					<div id="♠Q" class="card ♠ rQ">♠Q</div>
-					<div id="♠K" class="card ♠ rK">♠K</div>
+					<div id="♠A" class="card"></div>
+					<div id="♠2" class="card"></div>
+					<div id="♠3" class="card"></div>
+					<div id="♠4" class="card"></div>
+					<div id="♠5" class="card"></div>
+					<div id="♠6" class="card"></div>
+					<div id="♠7" class="card"></div>
+					<div id="♠8" class="card"></div>
+					<div id="♠9" class="card"></div>
+					<div id="♠X" class="card"></div>
+					<div id="♠J" class="card"></div>
+					<div id="♠Q" class="card"></div>
+					<div id="♠K" class="card"></div>
 				</div>
 				<div id="♥" class="pile ♥">
-					<div id="♥A" class="card ♥ rA">♥A</div>
-					<div id="♥2" class="card ♥ r2">♥2</div>
-					<div id="♥3" class="card ♥ r3">♥3</div>
-					<div id="♥4" class="card ♥ r4">♥4</div>
-					<div id="♥5" class="card ♥ r5">♥5</div>
-					<div id="♥6" class="card ♥ r6">♥6</div>
-					<div id="♥7" class="card ♥ r7">♥7</div>
-					<div id="♥8" class="card ♥ r8">♥8</div>
-					<div id="♥9" class="card ♥ r9">♥9</div>
-					<div id="♥X" class="card ♥ rX">♥10</div>
-					<div id="♥J" class="card ♥ rJ">♥J</div>
-					<div id="♥Q" class="card ♥ rQ">♥Q</div>
-					<div id="♥K" class="card ♥ rK">♥K</div>
+					<div id="♥A" class="card"></div>
+					<div id="♥2" class="card"></div>
+					<div id="♥3" class="card"></div>
+					<div id="♥4" class="card"></div>
+					<div id="♥5" class="card"></div>
+					<div id="♥6" class="card"></div>
+					<div id="♥7" class="card"></div>
+					<div id="♥8" class="card"></div>
+					<div id="♥9" class="card"></div>
+					<div id="♥X" class="card"></div>
+					<div id="♥J" class="card"></div>
+					<div id="♥Q" class="card"></div>
+					<div id="♥K" class="card"></div>
 				</div>
 				<div id="♣" class="pile ♣">
-					<div id="♣A" class="card ♣ rA">♣A</div>
-					<div id="♣2" class="card ♣ r2">♣2</div>
-					<div id="♣3" class="card ♣ r3">♣3</div>
-					<div id="♣4" class="card ♣ r4">♣4</div>
-					<div id="♣5" class="card ♣ r5">♣5</div>
-					<div id="♣6" class="card ♣ r6">♣6</div>
-					<div id="♣7" class="card ♣ r7">♣7</div>
-					<div id="♣8" class="card ♣ r8">♣8</div>
-					<div id="♣9" class="card ♣ r9">♣9</div>
-					<div id="♣X" class="card ♣ rX">♣10</div>
-					<div id="♣J" class="card ♣ rJ">♣J</div>
-					<div id="♣Q" class="card ♣ rQ">♣Q</div>
-					<div id="♣K" class="card ♣ rK">♣K</div>
+					<div id="♣A" class="card"></div>
+					<div id="♣2" class="card"></div>
+					<div id="♣3" class="card"></div>
+					<div id="♣4" class="card"></div>
+					<div id="♣5" class="card"></div>
+					<div id="♣6" class="card"></div>
+					<div id="♣7" class="card"></div>
+					<div id="♣8" class="card"></div>
+					<div id="♣9" class="card"></div>
+					<div id="♣X" class="card"></div>
+					<div id="♣J" class="card"></div>
+					<div id="♣Q" class="card"></div>
+					<div id="♣K" class="card"></div>
 				</div>
 				<div id="♦" class="pile ♦">
-					<div id="♦A" class="card ♦ rA">♦A</div>
-					<div id="♦2" class="card ♦ r2">♦2</div>
-					<div id="♦3" class="card ♦ r3">♦3</div>
-					<div id="♦4" class="card ♦ r4">♦4</div>
-					<div id="♦5" class="card ♦ r5">♦5</div>
-					<div id="♦6" class="card ♦ r6">♦6</div>
-					<div id="♦7" class="card ♦ r7">♦7</div>
-					<div id="♦8" class="card ♦ r8">♦8</div>
-					<div id="♦9" class="card ♦ r9">♦9</div>
-					<div id="♦X" class="card ♦ rX">♦10</div>
-					<div id="♦J" class="card ♦ rJ">♦J</div>
-					<div id="♦Q" class="card ♦ rQ">♦Q</div>
-					<div id="♦K" class="card ♦ rK">♦K</div>
+					<div id="♦A" class="card"></div>
+					<div id="♦2" class="card"></div>
+					<div id="♦3" class="card"></div>
+					<div id="♦4" class="card"></div>
+					<div id="♦5" class="card"></div>
+					<div id="♦6" class="card"></div>
+					<div id="♦7" class="card"></div>
+					<div id="♦8" class="card"></div>
+					<div id="♦9" class="card"></div>
+					<div id="♦X" class="card"></div>
+					<div id="♦J" class="card"></div>
+					<div id="♦Q" class="card"></div>
+					<div id="♦K" class="card"></div>
 				</div>
 				<div id="draw" class="pile draw"></div>
 				<div id="peek" class="pile peek"></div>
