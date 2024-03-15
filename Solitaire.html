@@ -27,6 +27,8 @@
 			}
 			#solitaire .pile {
 				position: relative;
+				min-width: var(--card-width);
+				min-height: var(--card-height);
 				padding: 0;
 			}
 			#solitaire .pile::before {
@@ -37,10 +39,13 @@
 				box-sizing: border-box;
 				left: 0;
 				right: 0;
-				height: var(--card-height);
+				padding: 1em;
 				box-sizing: border-box;
+				height: var(--card-height);
 				border: var(--card-border-width) solid #888;
 				border-radius: calc(var(--card-border-width) + var(--card-border-radius));
+				background: linear-gradient(-60deg, white 40%, currentColor, white 60%);
+				background-size: 100% 200%;
 			}
 			#solitaire .pile.peek {
 				width: unset;
@@ -82,10 +87,14 @@
 			#solitaire .card::after {
 				transform: scale(-1);
 			}
+			#solitaire .pile.♠,
+			#solitaire .pile.♣,
 			#solitaire .card.♠,
 			#solitaire .card.♣ {
 				color: black;
 			}
+			#solitaire .pile.♥,
+			#solitaire .pile.♦,
 			#solitaire .card.♥,
 			#solitaire .card.♦ {
 				color: #d00;
@@ -500,11 +509,13 @@
 						moveBegin()
 						function moveBegin() {
 							element.addEventListener('animationend', moveEnd, { once: true })
+							element.classList.toggle('moving', false)
 							element.style.setProperty('--move-x', prevRect.left - currRect.left)
 							element.style.setProperty('--move-y', prevRect.top - currRect.top)
 							element.classList.toggle('moving', true)
 						}
 						function moveEnd() {
+							element.classList.toggle('moving', true)
 							element.style.removeProperty('--move-x')
 							element.style.removeProperty('--move-y')
 							element.classList.toggle('moving', false)
