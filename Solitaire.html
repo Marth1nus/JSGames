@@ -99,8 +99,12 @@
 			#solitaire .card.♦ {
 				color: #d00;
 			}
-			#solitaire .pile .card:not(:last-of-type) {
-				height: calc(var(--card-padding) * 2 + 1.1em);
+			#solitaire .pile.draw .card,
+			#solitaire .pile .card.turned-over {
+				background: linear-gradient(-30deg, white 40%, currentColor, white 60%);
+				border-color: black;
+				pointer-events: none;
+				color: black;
 			}
 			#solitaire .pile.peek .card:not(:last-of-type) {
 				width: calc(var(--card-width) / 2);
@@ -113,12 +117,14 @@
 			#solitaire .pile.peek .card:not(:nth-last-of-type(-n + 3)) {
 				position: absolute;
 			}
-			#solitaire .pile.draw .card,
-			#solitaire .pile .card.turned-over {
-				background: linear-gradient(-30deg, white 40%, currentColor, white 60%);
-				border-color: black;
-				pointer-events: none;
-				color: black;
+			#solitaire .pile.p1 .card:not(:last-of-type),
+			#solitaire .pile.p2 .card:not(:last-of-type),
+			#solitaire .pile.p3 .card:not(:last-of-type),
+			#solitaire .pile.p4 .card:not(:last-of-type),
+			#solitaire .pile.p5 .card:not(:last-of-type),
+			#solitaire .pile.p6 .card:not(:last-of-type),
+			#solitaire .pile.p7 .card:not(:last-of-type) {
+				height: calc(var(--card-padding) * 2 + 1.1em);
 			}
 			#solitaire .pile .card.turned-over::before,
 			#solitaire .pile .card.turned-over::after,
@@ -136,7 +142,7 @@
 				z-index: 10;
 			}
 		</style>
-		<script>
+		<script title="Solitaire Game">
 			const solitaireSuits = '♠♥♣♦'
 			const solitaireRanks = 'A23456789XJQK'
 			const solitairePeekLength = 3
@@ -146,7 +152,7 @@
 				...['peek', 'draw'],
 			]
 			const solitaire = {
-				// ===== Data and Helpers =================================== Data and Helpers ================================
+				// ===== Data =============================================== Data ============================================
 				suits: solitaireSuits,
 				ranks: solitaireRanks,
 				pilePrefOrder: solitairePiles,
@@ -175,11 +181,9 @@
 						return move
 					},
 				},
-				allCardsGroupBySuit() {
-					return Array.from(this.suits, suit => Array.from(this.ranks, rank => `${suit}${rank}`))
-				},
+				// ===== Card =============================================== Card ============================================
 				allCards() {
-					return this.allCardsGroupBySuit().flat()
+					return Array.from(this.suits, suit => Array.from(this.ranks, rank => `${suit}${rank}`)).flat()
 				},
 				/**
 				 * @param {string} card
@@ -193,86 +197,61 @@
 					return { card: card.slice(0, 2), suit, rank, suitI, rankI, color, turnedOver: !!turnedOver }
 				},
 				// ===== Reset ============================================== Reset ===========================================
-				/**
-				 *
-				 */
 				reset() {
-					const { suits, ranks, piles, history, onReset, shuffle } = this
+					const { suits, ranks, piles, history, onReset } = this
 					for (const pile in piles) piles[pile] = []
-					const drawPile = (piles['draw'] = shuffle(this.allCards()))
-					for (let i = 1; i <= 7; i++) {
-						for (let j = i; j <= 7; j++) {
-							piles[j].push(drawPile.pop())
+					piles['draw'] = shuffle(this.allCards())
+					const numberPiles = Object.keys(piles).filter(Number)
+					for (let i = 0; i < numberPiles.length; i++) {
+						for (let j = i; j < numberPiles.length; j++) {
+							piles[numberPiles[j]].push(piles['draw'].pop())
 						}
 					}
 					history.undoMoves = []
 					history.redoMoves = []
 					onReset.call(this)
 				},
-				/** Shuffle an array in place
-				 * @param {string[]} items
-				 * @param {undefined} this
-				 */
-				shuffle(items) {
-					for (let i = items.length - 1; i > 0; i--) {
-						const j = Math.floor(Math.random() * (i + 1))
-						;[items[i], items[j]] = [items[j], items[i]]
-					}
-					return items
-				},
 				// ===== Move =============================================== Move ============================================
 				/**
 				 * @param {string} card
 				 * @param {string} source
 				 * @returns {string[]} - valid pile names
-				 * Implicit Validations (throw on fail):
-				 *  source is in piles
-				 *  card is in source
 				 */
 				validDestinations(card, source) {
 					const { suits, ranks, pilePrefOrder, peekLength, piles } = this
-					if (!piles[source]) throw new Error(`source "${source}" is not a pile`)
 					const cardI = piles[source].indexOf(card)
-					if (cardI === -1) throw new Error(`card "${card}" is not from source "${source}"`)
-					const cardIBack = cardI - piles[source].length
-					const cardD = this.cardDetails(card)
-					return source === 'draw' // ..................... |	if source is draw
-						? cardIBack === -peekLength //                  |		if the last {peekLength} cards are to be moved
-							? ['peek'] //                                 |			peek is the only valid destination
-							: piles[source].length < peekLength //        |		else if source has less than {peekLength} cards
-							? cardI === 0 //                              |			if the whole source is to be moved
-								? ['peek'] //                               |				peek is the only valid destination
-								: [] //                                     |			else no valid destinations
-							: [] //                                       |		else no valid destinations
-						: source === 'peek' && // ..................... |	else if source is a suit
-						  cardIBack !== -1 //                           |	and card is not the top of the pile
-						? piles['draw'].length === 0 && //              |		if draw pile is empty
-						  cardI === 0 //                                |		and the entire peek pile to be moved
-							? ['draw'] //                                 |			draw is the only valid destination
-							: [] //                                       |		else no valid destination
-						: suits.includes(source) && // ................ |	else if source is a suit
-						  cardIBack !== -1 //                           |	and card is not the top of the pile
-						? [] //                                         |		no valid destination
-						: pilePrefOrder // ............................ |	else filter all piles for a valid destination
-								.filter(validDestination, this)
-					/**@param {string} destination*/
-					function validDestination(destination) {
-						const topCard = piles[destination].at(-1) ?? ''
-						const topCardD = this.cardDetails(topCard)
-						return destination === source // .............. |	if destination is source
-							? false //                                    |		false
-							: destination === cardD.suit && // .......... |	else if destination is card suit
-							  cardIBack === -1 //                         | and card is the top of the source
-							? topCard //                                  |		if there is a top card in the destination
-								? cardD.rankI === topCardD.rankI + 1 //     |			ascending card rank
-								: cardD.rank === ranks.at(-0) //            |		else starts with Ace
-							: Number(destination) && // ................. |	else if destination is a number
-							  cardD.color !== topCardD.color //           |	and color alternating
-							? topCard //                                  |		if there is a top card in the destination
-								? cardD.rankI === topCardD.rankI - 1 //     |			descending card rank
-								: cardD.rank === ranks.at(-1) //            |		else start with King
-							: false // .................................. |	else false
-					}
+					if (cardI === -1) throw new Error(`card "${card}" not in source "${source}"`)
+					if (source === 'draw')
+						return cardI - piles['draw'].length === -peekLength || //
+							(piles['draw'].length < peekLength && cardI === 0)
+							? ['peek']
+							: ''
+					const sourceCards = piles[source]
+					const movingCards = sourceCards.slice(cardI)
+					return pilePrefOrder.filter(destination => {
+						if (destination === source) return false
+						if (destination === 'draw') return source === 'peek' && cardI === 0
+						const destinationCards = piles[destination]
+						const cards = [...destinationCards.slice(-1), ...movingCards].map(card => this.cardDetails(card))
+						if (Number(destination)) {
+							if (destinationCards.length === 0) return cards[0].rank === ranks.at(-1) // start with King
+							return everyPair(
+								cards,
+								(prev, curr) =>
+									prev.rankI - 1 === curr.rankI && // rank descending
+									prev.color !== curr.color, // color alternate
+							)
+						}
+						if (destination === cards[0].suit) {
+							if (destinationCards.length === 0) return cards[0].rank === ranks.at(0) // start with Ace
+							return everyPair(
+								cards,
+								(prev, curr) =>
+									prev.rankI + 1 === curr.rankI && // rank ascending
+									prev.suit === curr.suit, // suit uniform
+							)
+						}
+					})
 				},
 				/**
 				 * @param {string} card
@@ -306,19 +285,22 @@
 				},
 				moveDraw() {
 					const { peekLength, piles } = this
-					const [source, destination, cardI] = piles['draw'].length //
-						? ['draw', 'peek', -peekLength]
-						: ['peek', 'draw', 0]
-					return this.move(piles[source].slice(cardI)[0], source, destination)
+					if (piles['draw'].length) {
+						return this.move(piles['draw'].slice(-peekLength)[0], 'draw', 'peek')
+					}
+					piles['peek'] = Array.from(
+						{ length: Math.ceil(piles['peek'].length / peekLength) }, //
+						(_, i) => piles['peek'].slice(i * peekLength, (i + 1) * peekLength),
+					)
+						.reverse()
+						.flat()
+					return this.move(piles['peek'][0], 'peek', 'draw')
 				},
 				// ===== End ================================================ End =============================================
 				ended() {
 					const { suits, piles } = this
 					return Object.keys(piles).every(pile => suits.includes(pile) || !piles[pile].length)
 				},
-				/**
-				 *
-				 */
 				end() {
 					const { onEnd } = this
 					onEnd.call(this)
@@ -333,10 +315,31 @@
 				onMove: function (cards, source, destination, type) {},
 				onReset: function () {},
 				onEnd: function () {},
-				// ============================================================================================================
+			}
+			// ======= Utils ============================================== Utils ===========================================
+			/** Shuffle an array in place
+			 * @template T
+			 * @param {T[]} items
+			 */
+			function shuffle(items) {
+				for (let i = items.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1))
+					;[items[i], items[j]] = [items[j], items[i]]
+				}
+				return items
+			}
+			/**
+			 * @template T
+			 * @param {T[]} items
+			 * @param {(prev:T,curr:T)=>boolean} test
+			 * Returns true if items.length < 2
+			 */
+			function everyPair(items, test) {
+				for (let i = 1; i < items.length; i++) if (!test(items[i - 1], items[i])) return false
+				return true
 			}
 		</script>
-		<script>
+		<script title="Solitaire DOM">
 			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
 			/**
 			 * @this {Document}
@@ -458,20 +461,24 @@
 				 * @param {'push'|'redo'|'undo'} type
 				 */
 				function onMove(cardIds, sourceId, destinationId, type) {
-					const source = document.getElementById(sourceId)
 					const destination = document.getElementById(destinationId)
 					const destinationCards = [...destination.querySelectorAll('.card')]
 					const destinationTopCards = destinationCards.splice(-cardIds.length)
+					const source = document.getElementById(sourceId)
 					const sourceCards = [...source.querySelectorAll('.card')]
 					const sourceTopCards = sourceCards.splice(-cardIds.length * 2)
-					const cards = sourceTopCards.splice(-cardIds.length)
+					const sourceMovingCards = sourceTopCards.splice(-cardIds.length)
+					const cards = cardIds.map(id => document.getElementById(id))
+					/*Verify cards === sourceMovingCards not order sensitive*/ {
+						const cardSet = new Set(cards)
+						for (const card of sourceMovingCards) {
+							if (cardSet.has(card) && card.parentElement === source);
+							else throw new Error(`DOM de-sync`)
+							cardSet.delete(card)
+						}
+						if (cardSet.size) throw new Error(`DOM de-sync`)
+					}
 					sourceTopCards.at(-1)?.classList.toggle('turned-over', false)
-					cards.forEach((_, i) => {
-						const idValid = cards[i].id === cardIds[i]
-						const sourceValid = cards[i].parentElement === source
-						if (idValid && sourceValid) return
-						throw new Error(`DOM de-sync`)
-					})
 					moveElementsSmooth([
 						{ elements: sourceTopCards /*     */, destination: source /*     */ },
 						{ elements: destinationTopCards /**/, destination: destination /**/ },
