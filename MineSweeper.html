@@ -1,295 +1,345 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MineSweeper</title>
-  <script>
-    const mineSweeperGame = {
-      n: 16,
-      m: 16,
-      cells: [],
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>MineSweeper</title>
+		<style>
+			.height-limiter div {
+				overflow: hidden;
+				width: 0;
+			}
+			.width-limiter div {
+				overflow: hidden;
+				height: 0;
+			}
 
-      reset(n, m, bomb_count) {
-        this.n = n = n ?? this.n
-        this.m = m = m ?? this.m
-        bomb_count = bomb_count ?? Math.floor((0.1 + 0.1 * Math.random()) * n * m)
+			.cell {
+				outline: 1px solid gray;
+				border-radius: 2px;
+				text-align: center;
+				-webkit-user-select: none;
+				user-select: none;
+			}
+			.cell.flagged {
+				outline: 1px dotted red;
+			}
+			.cell:hover {
+				background-color: #00000080;
+			}
+			.cell.revealed {
+				background-color: #00000080;
+				outline: none;
+			}
+			.cell.revealed.value0 {
+				color: transparent;
+			}
+			.cell.revealed.value1 {
+				color: blue;
+			}
+			.cell.revealed.value2 {
+				color: green;
+			}
+			.cell.revealed.value3 {
+				color: red;
+			}
+			.cell.revealed.value4 {
+				color: purple;
+			}
+			.cell.revealed.value5 {
+				color: yellow;
+			}
+			.cell.revealed.value6 {
+				color: orange;
+			}
+			.cell.revealed.value7 {
+				color: darkred;
+			}
+			.cell.revealed.value8 {
+				color: black;
+			}
+			.cell.revealed.value💣 {
+				background-color: var(--bomb-color);
+			}
+			.win {
+				--bomb-color: green;
+			}
+			.lose {
+				--bomb-color: red;
+			}
 
-        // create cells
-        const gameTds = this.buildDomElements(n, m)
-        this.cells = Array
-        .from({length:n}, (_, i) => Array
-        .from({length:m}, (_, j) => {
-          const cell = {
-            i,j,
-            value:0,
-            td: gameTds[i][j],
-            _isRevealed:false,
-            _isFlagged:false,
+			#MineSweeperGame {
+				outline: 1px solid gray;
+				width: min-content;
+			}
 
-            get isRevealed() { return this._isRevealed },
-            get isFlagged() { return this._isFlagged },
-            get isBomb() { return this.value === '💣' },
+			#MineSweeperGame > header {
+				display: flex;
+				flex-direction: row;
+				justify-content: space-around;
+				align-items: end;
+				max-width: 100vw;
+			}
 
-            set isRevealed(value) {
-              this._isRevealed = value
-              this.td.textContent = value ? this.value : ''
-              this.td.classList.toggle('revealed', value)
-              this.td.classList.toggle(`value${this.value}`, value)
-            },
-            set isFlagged(value) {
-              this._isFlagged = value
-              this.td.textContent = value ? '🚩' : ''
-              this.td.classList.toggle('flagged', value)
-            },
-            set isBomb(value) {
-              this.value = 
-                value ? '💣' : 
-                this.isBomb ? 0 : 
-                this.value
-            },
-          }
-          cell.td.gameCell = cell
-          cell.td.textContent = ''
-          cell.td.className = 'cell'
-          return cell
-        }))
-        .flat()
+			#MineSweeperGame > header table {
+				text-align: right;
+			}
+		</style>
+		<script>
+			const mineSweeperGame = {
+				n: 16,
+				m: 16,
+				cells: [],
 
-        // place bombs
-        const bombs = new Set()
-        while (bombs.size < bomb_count) {
-          const i = Math.floor(Math.random() * this.cells.length)
-          bombs.add(this.cells[i])
-        }
-        bombs.forEach(c => c.isBomb = true)
+				reset(n, m, bomb_count) {
+					this.n = n = n ?? this.n
+					this.m = m = m ?? this.m
+					bomb_count = bomb_count ?? Math.floor((0.1 + 0.1 * Math.random()) * n * m)
 
-        // calculate neighbor count
-        this.cells
-        .filter(c => !c.isBomb)
-        .forEach(c => c.value = this
-          .getNeighbors(c)
-          .filter(c => c.isBomb)
-          .length)
+					// create cells
+					const gameTds = this.buildDomElements(n, m)
+					this.cells = Array.from({ length: n }, (_, i) =>
+						Array.from({ length: m }, (_, j) => {
+							const cell = {
+								i,
+								j,
+								value: 0,
+								td: gameTds[i][j],
+								_isRevealed: false,
+								_isFlagged: false,
 
-        this.gameDiv.classList.remove('win', 'lose')
-        this.updateInfo()
-        console.log('New game', this)
-      },
+								get isRevealed() {
+									return this._isRevealed
+								},
+								get isFlagged() {
+									return this._isFlagged
+								},
+								get isBomb() {
+									return this.value === '💣'
+								},
 
-      testEnd(cell) {
-        if (this.cells.some(c => c.isBomb && c.isRevealed)) {
-          return this.end('lose', 'A Bomb was Revealed', cell)
-        }
-        if (this.cells.every(c => c.isBomb !== c.isRevealed)) {
-          return this.end('win', 'Every Non-Bomb Revealed', cell)
-        }
-        const bombs = this.cells.filter(c => c.isBomb)
-        const flags = this.cells.filter(c => c.isFlagged)
-        if (flags.length
-        &&  flags.every(c => c.isBomb)
-        &&  bombs.every(c => c.isFlagged)) {
-          return this.end('win', 'Every and Only Bombs are Flagged', cell)
-        }
-      },
+								set isRevealed(value) {
+									this._isRevealed = value
+									this.td.textContent = value ? this.value : ''
+									this.td.classList.toggle('revealed', value)
+									this.td.classList.toggle(`value${this.value}`, value)
+								},
+								set isFlagged(value) {
+									this._isFlagged = value
+									this.td.textContent = value ? '🚩' : ''
+									this.td.classList.toggle('flagged', value)
+								},
+								set isBomb(value) {
+									this.value = value ? '💣' : this.isBomb ? 0 : this.value
+								},
+							}
+							cell.td.gameCell = cell
+							cell.td.textContent = ''
+							cell.td.className = 'cell'
+							return cell
+						}),
+					).flat()
 
-      end(state, message, cell) {
-        console.log({state, message, cell})
-        this.gameDiv.classList.toggle(state, true)
-        this.cells
-        .filter(c => !c.isRevealed)
-        .forEach(c => c.isRevealed = true)
-      },
+					// place bombs
+					const bombs = new Set()
+					while (bombs.size < bomb_count) {
+						const i = Math.floor(Math.random() * this.cells.length)
+						bombs.add(this.cells[i])
+					}
+					bombs.forEach(c => (c.isBomb = true))
 
-      dig(cell, testEnd=true) {
-        if (cell.isFlagged) { return }
-        const wasRevealed = cell.isRevealed
-        cell.isRevealed = true
+					// calculate neighbor count
+					this.cells.filter(c => !c.isBomb).forEach(c => (c.value = this.getNeighbors(c).filter(c => c.isBomb).length))
 
-        // cell value is 0 propagates
-        if (cell.value == 0) {
-          this
-          .getNeighbors(cell)
-          .forEach(c => {
-            if (c.isRevealed) { return }
-            this.dig(c, false)
-          })
-          return
-        }
+					this.gameDiv.classList.remove('win', 'lose')
+					this.updateInfo()
+					console.log('New game', this)
+				},
 
-        // clicking a revealed number with enough flags propagates
-        if (wasRevealed) {
-          const neighbors = this.getNeighbors(cell)
-          if (cell.value != neighbors
-            .filter(c => c.isFlagged)
-            .length) { return }
-          neighbors
-          .filter(c => !c.isFlagged)
-          .forEach(c => {
-            if (c.isRevealed) { return }
-            this.dig(c, false)
-          })
-        }
+				testEnd(cell) {
+					if (this.cells.some(c => c.isBomb && c.isRevealed)) {
+						return this.end('lose', 'A Bomb was Revealed', cell)
+					}
+					if (this.cells.every(c => c.isBomb !== c.isRevealed)) {
+						return this.end('win', 'Every Non-Bomb Revealed', cell)
+					}
+					const bombs = this.cells.filter(c => c.isBomb)
+					const flags = this.cells.filter(c => c.isFlagged)
+					if (flags.length && flags.every(c => c.isBomb) && bombs.every(c => c.isFlagged)) {
+						return this.end('win', 'Every and Only Bombs are Flagged', cell)
+					}
+				},
 
-        if (testEnd) {
-          this.testEnd(cell)
-          this.updateInfo()
-        }
-      },
+				end(state, message, cell) {
+					console.log({ state, message, cell })
+					this.gameDiv.classList.toggle(state, true)
+					this.cells.filter(c => !c.isRevealed).forEach(c => (c.isRevealed = true))
+				},
 
-      flag(cell) {
-        if (cell.isRevealed) { return }
-        cell.isFlagged = !cell.isFlagged
-        this.testEnd(cell)
-        this.updateInfo()
-      },
+				dig(cell, testEnd = true) {
+					if (cell.isFlagged) {
+						return
+					}
+					const wasRevealed = cell.isRevealed
+					cell.isRevealed = true
 
-      // === Utilities ===
+					// cell value is 0 propagates
+					if (cell.value == 0) {
+						this.getNeighbors(cell).forEach(c => {
+							if (c.isRevealed) {
+								return
+							}
+							this.dig(c, false)
+						})
+						return
+					}
 
-      getCell(i, j) {
-        const {n, m, cells} = this
-        if (i < 0 || n <= i
-        ||  j < 0 || m <= j) { return }
-        return cells[m * i + j]
-      },
+					// clicking a revealed number with enough flags propagates
+					if (wasRevealed) {
+						const neighbors = this.getNeighbors(cell)
+						if (cell.value != neighbors.filter(c => c.isFlagged).length) {
+							return
+						}
+						neighbors
+							.filter(c => !c.isFlagged)
+							.forEach(c => {
+								if (c.isRevealed) {
+									return
+								}
+								this.dig(c, false)
+							})
+					}
 
-      getNeighbors(cell) {
-        const {i, j} = cell
-        const indices = [-1, 0, 1]
-        return indices
-        .map(iOffset => indices
-        .map(jOffset => this.getCell(
-          i + iOffset, 
-          j + jOffset,
-        )))
-        .flat()
-        .filter(c => c && c !== cell)
-      },
+					if (testEnd) {
+						this.testEnd(cell)
+						this.updateInfo()
+					}
+				},
 
-      // === Dom ===
+				flag(cell) {
+					if (cell.isRevealed) {
+						return
+					}
+					cell.isFlagged = !cell.isFlagged
+					this.testEnd(cell)
+					this.updateInfo()
+				},
 
-      get gameDiv() { return document.getElementById('MineSweeperGame') },
-      buildDomElements(n, m) {
-        const game = this.gameDiv
-        const tbody = game.querySelector(':scope>table>tbody')
+				// === Utilities ===
 
-        // create rows
-        const [topLimiter, ...reusableTrs] = tbody.querySelectorAll(':scope>tr')
-        const bottomLimiter = reusableTrs.pop()
-        const rowTemplate = reusableTrs[0]
-        const trs = [
-          topLimiter,
-          ...Array.from({length:n}, (_, i) =>
-            reusableTrs[i] ?? rowTemplate.cloneNode(true)),
-          bottomLimiter,
-        ]
-        tbody.replaceChildren(...trs)
+				getCell(i, j) {
+					const { n, m, cells } = this
+					if (i < 0 || n <= i || j < 0 || m <= j) {
+						return
+					}
+					return cells[m * i + j]
+				},
 
-        // create columns
-        const gameTds = trs.map(tr => {
-          const [leftLimiter, ...reusableTds] = tr.querySelectorAll(':scope>td')
-          const rightLimiter = reusableTds.pop()
-          const cellTemplate = reusableTds[0]
-          const tds = [
-            leftLimiter,
-            ...Array.from({length:m}, (_,i) =>
-              reusableTds[i] ?? cellTemplate.cloneNode(true)),
-            rightLimiter,
-          ]
-          tr.replaceChildren(...tds)
-          return tds.slice(1, -1)
-        })
+				getNeighbors(cell) {
+					const { i, j } = cell
+					const indices = [-1, 0, 1]
+					return indices
+						.map(iOffset => indices.map(jOffset => this.getCell(i + iOffset, j + jOffset)))
+						.flat()
+						.filter(c => c && c !== cell)
+				},
 
-        return gameTds.slice(1, -1)
-      },
+				// === Dom ===
 
-      updateInfo() {
-        const [
-          totalBombs,
-          flaggedBombs,
-        ] = this.gameDiv
-          .querySelector(':scope>header>table>tbody')
-          .querySelectorAll('td')
-        totalBombs.textContent = this.cells.filter(c => c.isBomb).length
-        flaggedBombs.textContent = this.cells.filter(c => c.isFlagged).length
-      },
+				get gameDiv() {
+					return document.getElementById('MineSweeperGame')
+				},
+				buildDomElements(n, m) {
+					const game = this.gameDiv
+					const tbody = game.querySelector(':scope>table>tbody')
 
-      cheatPeek() {
-        this.cells.forEach(c => c.td.textContent = c.value)
-      }
-    }
-  </script>
-  <style>
-    .height-limiter div { overflow: hidden; width: 0; }
-    .width-limiter div { overflow: hidden; height: 0; }
+					// create rows
+					const [topLimiter, ...reusableTrs] = tbody.querySelectorAll(':scope>tr')
+					const bottomLimiter = reusableTrs.pop()
+					const rowTemplate = reusableTrs[0]
+					const trs = [
+						topLimiter,
+						...Array.from({ length: n }, (_, i) => reusableTrs[i] ?? rowTemplate.cloneNode(true)),
+						bottomLimiter,
+					]
+					tbody.replaceChildren(...trs)
 
-    .cell {
-      outline: 1px solid gray;
-      border-radius: 2px;
-      text-align: center;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    .cell.flagged { outline: 1px dotted red; }
-    .cell:hover { background-color: #00000080; }
-    .cell.revealed { background-color: #00000080; outline: none; }
-    .cell.revealed.value0 { color: transparent; }
-    .cell.revealed.value1 { color: blue; }
-    .cell.revealed.value2 { color: green; }
-    .cell.revealed.value3 { color: red; }
-    .cell.revealed.value4 { color: purple; }
-    .cell.revealed.value5 { color: yellow; }
-    .cell.revealed.value6 { color: orange; }
-    .cell.revealed.value7 { color: darkred; }
-    .cell.revealed.value8 { color: black; }
-    .cell.revealed.value💣 { background-color: var(--bomb-color); }
-    .win { --bomb-color:green; }
-    .lose { --bomb-color:red; }
+					// create columns
+					const gameTds = trs.map(tr => {
+						const [leftLimiter, ...reusableTds] = tr.querySelectorAll(':scope>td')
+						const rightLimiter = reusableTds.pop()
+						const cellTemplate = reusableTds[0]
+						const tds = [
+							leftLimiter,
+							...Array.from({ length: m }, (_, i) => reusableTds[i] ?? cellTemplate.cloneNode(true)),
+							rightLimiter,
+						]
+						tr.replaceChildren(...tds)
+						return tds.slice(1, -1)
+					})
 
-    #MineSweeperGame {
-      outline: 1px solid gray;
-      width: min-content;
-    }
+					return gameTds.slice(1, -1)
+				},
 
-    #MineSweeperGame>header {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-around;
-      align-items: end;
-      max-width: 100vw;
-    }
+				updateInfo() {
+					const [totalBombs, flaggedBombs] = this.gameDiv
+						.querySelector(':scope>header>table>tbody')
+						.querySelectorAll('td')
+					totalBombs.textContent = this.cells.filter(c => c.isBomb).length
+					flaggedBombs.textContent = this.cells.filter(c => c.isFlagged).length
+				},
 
-    #MineSweeperGame>header table { text-align: right; }
-  </style>
-</head>
-<body>
-  <div id="MineSweeperGame">
-    <header>
-      <table>
-        <tbody>
-          <tr><th>  Total Mines:</th><td>#</td></tr>
-          <tr><th>Flagged Mines:</th><td>#</td></tr>
-        </tbody>
-      </table>
-      <button onclick="mineSweeperGame.reset()">Reset</button>
-    </header>
-    <table oncontextmenu="event.preventDefault()"><tbody>
-      <tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
-      <tr>
-        <td class="height-limiter"><div>🟫</div></td>
-        <td class="cell"
-          onclick      ="mineSweeperGame.dig (event.target.gameCell) ;event.preventDefault()"
-          oncontextmenu="mineSweeperGame.flag(event.target.gameCell) ;event.preventDefault()"
-        >
-        💣
-        </td>
-        <td class="height-limiter"><div>🟫</div></td>
-      </tr>
-      <tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
-    </tbody></table>
-  </div>
-  <script>
-    mineSweeperGame.reset(32,32,200)
-  </script>
-</body>
+				cheatPeek() {
+					this.cells.forEach(c => (c.td.textContent = c.value))
+				},
+			}
+		</script>
+	</head>
+	<body>
+		<div id="MineSweeperGame">
+			<header>
+				<table>
+					<tbody>
+						<tr>
+							<th>Total Mines:</th>
+							<td>#</td>
+						</tr>
+						<tr>
+							<th>Flagged Mines:</th>
+							<td>#</td>
+						</tr>
+					</tbody>
+				</table>
+				<button onclick="mineSweeperGame.reset()">Reset</button>
+			</header>
+			<table oncontextmenu="event.preventDefault()">
+				<tbody>
+					<tr class="width-limiter">
+						<td></td>
+						<td><div>🟫</div></td>
+						<td></td>
+					</tr>
+					<tr>
+						<td class="height-limiter"><div>🟫</div></td>
+						<td
+							class="cell"
+							onclick="mineSweeperGame.dig (event.target.gameCell) ;event.preventDefault()"
+							oncontextmenu="mineSweeperGame.flag(event.target.gameCell) ;event.preventDefault()"
+						>
+							💣
+						</td>
+						<td class="height-limiter"><div>🟫</div></td>
+					</tr>
+					<tr class="width-limiter">
+						<td></td>
+						<td><div>🟫</div></td>
+						<td></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<script>
+			mineSweeperGame.reset(32, 32, 200)
+		</script>
+	</body>
 </html>
