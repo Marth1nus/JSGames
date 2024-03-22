@@ -132,7 +132,7 @@
           get no       () { return this.querySelector('.no  ') },
           get question () { return this.querySelector('h1   ') },
           /**@returns {HTMLElement} @param {string} selector*/
-          querySelector(selector) { return document.querySelector(`.question ${selector}`) },
+          querySelector(selector) { return document.querySelector(`.question ${selector.trim()}`) },
           icons: {
             get flusteredOnPhone    () { return this.querySelector('flustered-on-phone   ') },
             get flusteredTipToe     () { return this.querySelector('flustered-tip-toe    ') },
@@ -147,7 +147,7 @@
             get confidentPlease     () { return this.querySelector('confident-please     ') },
             get angryLookAway       () { return this.querySelector('angry-look-away      ') },
             /**@returns {HTMLImgElement} @param {string} name*/
-            querySelector(name) { return document.querySelector(`#hidden-resources img.${name}`).cloneNode(false) },
+            querySelector(name) { return document.querySelector(`#hidden-resources img.${name.trim()}`).cloneNode(false) },
           },
           music: {
             get wiiShopping   () { return this.querySelector('wii-shopping  ') },
@@ -162,10 +162,10 @@
 			}
 			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
 			function onDOMContentLoaded() {
+				valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
 				valentineGame.dom.yes.addEventListener('click', event => valentineGame.yes())
 				valentineGame.dom.no.addEventListener('click', event => valentineGame.no())
-				valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
-				valentineGame.no()
+				valentineGame.dom.no.click()
 			}
 		</script>
 	</head>
