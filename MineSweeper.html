@@ -1,3 +1,5 @@
+<!-- @format -->
+
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -137,7 +139,7 @@
 							cell.td.textContent = ''
 							cell.td.className = 'cell'
 							return cell
-						}),
+						})
 					).flat()
 
 					// place bombs
@@ -298,43 +300,29 @@
 	<body>
 		<div id="MineSweeperGame">
 			<header>
-				<table>
-					<tbody>
-						<tr>
-							<th>Total Mines:</th>
-							<td>#</td>
-						</tr>
-						<tr>
-							<th>Flagged Mines:</th>
-							<td>#</td>
-						</tr>
-					</tbody>
-				</table>
-				<button onclick="mineSweeperGame.reset()">Reset</button>
+				<!-- prettier-ignore -->
+				<table><tbody>
+					<tr><th>  Total Mines:</th><td>#</td></tr>
+					<tr><th>Flagged Mines:</th><td>#</td></tr>
+				</tbody></table>
+				<button onclick="mineSweeperGame.reset()" type="button">Reset</button>
 			</header>
 			<table oncontextmenu="event.preventDefault()">
 				<tbody>
-					<tr class="width-limiter">
-						<td></td>
-						<td><div>🟫</div></td>
-						<td></td>
-					</tr>
+					<!-- prettier-ignore -->
+					<tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
 					<tr>
 						<td class="height-limiter"><div>🟫</div></td>
 						<td
 							class="cell"
-							onclick="mineSweeperGame.dig (event.target.gameCell) ;event.preventDefault()"
-							oncontextmenu="mineSweeperGame.flag(event.target.gameCell) ;event.preventDefault()"
-						>
+							onclick="      mineSweeperGame.dig (event.target.gameCell) ;event.preventDefault()"
+							oncontextmenu="mineSweeperGame.flag(event.target.gameCell) ;event.preventDefault()">
 							💣
 						</td>
 						<td class="height-limiter"><div>🟫</div></td>
 					</tr>
-					<tr class="width-limiter">
-						<td></td>
-						<td><div>🟫</div></td>
-						<td></td>
-					</tr>
+					<!-- prettier-ignore -->
+					<tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
 				</tbody>
 			</table>
 		</div>
