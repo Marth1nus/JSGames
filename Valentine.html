@@ -65,7 +65,9 @@
 				yes() {
 					const { yes, no, icon, question, icons, music } = this.dom
 					question.textContent = '❤️ YAY ❤️'
-					yes.parentNode.replaceChildren(`You said no ${this.noCount} times before saying yes XD`)
+					const answer = yes.parentNode
+					answer.replaceChildren(`You said no ${this.noCount} times before saying yes XD`)
+					answer.style.padding = '0 2vmin'
 					this.noCount = 0
 					music.yippee.play()
 					let imageIndex = 0
@@ -77,7 +79,10 @@
 						icons.hugAttack
 					]
 					const nextImage = async () => {
-						this.dom.icon = imgs[imageIndex++] ?? imgs[(imageIndex = 0)]
+						this.dom.icon.replaceChildren(
+							imgs[imageIndex++] ?? //
+								imgs[(imageIndex = 0)]
+						)
 						setTimeout(nextImage, 4000)
 					}
 					nextImage()
@@ -159,7 +164,7 @@
 			function onDOMContentLoaded() {
 				valentineGame.dom.yes.addEventListener('click', event => valentineGame.yes())
 				valentineGame.dom.no.addEventListener('click', event => valentineGame.no())
-        valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
+				valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
 				valentineGame.no()
 			}
 		</script>
