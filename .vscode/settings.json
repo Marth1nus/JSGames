@@ -1,11 +1,3 @@
 {
 	"prettier.configPath": ".prettierrc",
-	"prettier.htmlWhitespaceSensitivity": "ignore",
-	"prettier.insertPragma": true,
-	"prettier.jsxSingleQuote": true,
-	"prettier.printWidth": 120,
-	"prettier.requireConfig": true,
-	"prettier.singleQuote": true,
-	"prettier.arrowParens": "avoid",
-	"prettier.bracketSameLine": true
 }
