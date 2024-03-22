@@ -1,614 +1,614 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Solitaire</title>
-		<style>
-			#solitaire {
-				--card-width: 3em;
-				--card-height: 5em;
-				--card-padding: 0.2em;
-				--card-border-radius: 0.4em;
-				--card-border-width: 0.1em;
-				display: grid;
-				grid-template: auto auto / auto auto auto;
-				justify-content: center;
-				align-items: center;
-				gap: 1em;
-			}
-			#solitaire .piles {
-				display: grid;
-				grid-column: span 3;
-				grid-template: auto auto / auto auto auto auto auto auto auto;
-				width: min-content;
-				height: min-content;
-				gap: 0.5em;
-			}
-			#solitaire .pile {
-				position: relative;
-				min-width: var(--card-width);
-				min-height: var(--card-height);
-				padding: 0;
-			}
-			#solitaire .pile::before {
-				content: attr(id);
-				display: block;
-				position: absolute;
-				text-align: center;
-				box-sizing: border-box;
-				left: 0;
-				right: 0;
-				padding-top: 1em;
-				box-sizing: border-box;
-				height: var(--card-height);
-				border: var(--card-border-width) solid #888;
-				border-radius: calc(var(--card-border-width) + var(--card-border-radius));
-				background: linear-gradient(-60deg, white 40%, currentColor, white 60%);
-				background-size: 100% 200%;
-			}
-			#solitaire .pile.peek {
-				width: unset;
-				min-width: var(--card-width);
-				grid-column: span 2;
-				display: flex;
-				flex-direction: row;
-				justify-content: space-between;
-			}
-			#solitaire .card {
-				-webkit-user-select: none;
-				user-select: none;
-				text-align: left;
-				position: relative;
-				box-sizing: border-box;
-				width: var(--card-width);
-				border-radius: var(--card-border-radius);
-				background: white;
-			}
-			#solitaire .card::before,
-			#solitaire .card::after {
-				background: inherit;
-				background-size: 10% 10%;
-				background-clip: border-box;
-				background-position: center;
-				content: attr(title);
-				color: inherit;
-				display: block;
-				border: var(--card-border-width) solid currentColor;
-				border-radius: inherit;
-				border-bottom-left-radius: 0;
-				border-bottom-right-radius: 0;
-				border-bottom: none;
-				width: var(--card-width);
-				height: calc(var(--card-height) / 2);
-				padding: var(--card-padding);
-				box-sizing: inherit;
-			}
-			#solitaire .card::after {
-				transform: scale(-1);
-			}
-			#solitaire .pile.♠,
-			#solitaire .pile.♣,
-			#solitaire .card.♠,
-			#solitaire .card.♣ {
-				color: black;
-			}
-			#solitaire .pile.♥,
-			#solitaire .pile.♦,
-			#solitaire .card.♥,
-			#solitaire .card.♦ {
-				color: #d00;
-			}
-			#solitaire .pile.draw .card,
-			#solitaire .pile .card.turned-over {
-				background: linear-gradient(-30deg, white 40%, currentColor, white 60%);
-				border-color: black;
-				pointer-events: none;
-				color: black;
-			}
-			#solitaire .pile.peek .card:not(:last-of-type) {
-				width: calc(var(--card-width) / 2);
-			}
-			#solitaire .pile.♠ .card:not(:last-of-type),
-			#solitaire .pile.♥ .card:not(:last-of-type),
-			#solitaire .pile.♣ .card:not(:last-of-type),
-			#solitaire .pile.♦ .card:not(:last-of-type),
-			#solitaire .pile.draw .card:not(:last-of-type),
-			#solitaire .pile.peek .card:not(:nth-last-of-type(-n + 3)) {
-				position: absolute;
-			}
-			#solitaire .pile.p1 .card:not(:last-of-type),
-			#solitaire .pile.p2 .card:not(:last-of-type),
-			#solitaire .pile.p3 .card:not(:last-of-type),
-			#solitaire .pile.p4 .card:not(:last-of-type),
-			#solitaire .pile.p5 .card:not(:last-of-type),
-			#solitaire .pile.p6 .card:not(:last-of-type),
-			#solitaire .pile.p7 .card:not(:last-of-type) {
-				height: calc(var(--card-padding) * 2 + 1.1em);
-			}
-			#solitaire .pile .card.turned-over::before,
-			#solitaire .pile .card.turned-over::after,
-			#solitaire .pile.draw .card::before,
-			#solitaire .pile.draw .card::after {
-				content: '';
-			}
-			@keyframes move {
-				from {
-					transform: translate(calc(var(--move-x) * 1px), calc(var(--move-y) * 1px));
-				}
-			}
-			#solitaire .moving {
-				animation: move 0.2s ease-in-out forwards;
-				z-index: 10;
-			}
-		</style>
-		<script title="Solitaire Game">
-			const solitaireSuits = '♠♥♣♦'
-			const solitaireRanks = 'A23456789XJQK'
-			const solitairePeekLength = 3
-			const solitairePiles = [
-				...solitaireSuits,
-				...Array.from({ length: 7 }, (_, i) => String(1 + i)),
-				...['peek', 'draw'],
-			]
-			const solitaire = {
-				// ===== Data =============================================== Data ============================================
-				suits: solitaireSuits,
-				ranks: solitaireRanks,
-				pilePrefOrder: solitairePiles,
-				peekLength: solitairePeekLength,
-				piles: Object.fromEntries(solitairePiles.map(pile => [pile, [''].slice(1)])),
-				history: {
-					undoMoves: [['']].slice(1),
-					redoMoves: [['']].slice(1),
-					/**
-					 * @param {string} card
-					 * @param {string} source
-					 * @param {string} destination
-					 */
-					push(card, source, destination) {
-						this.redoMoves = [[card, source, destination]]
-						return this.redo()
-					},
-					redo() {
-						const move = this.redoMoves.pop()
-						if (move) this.undoMoves.push(move)
-						return move
-					},
-					undo() {
-						const move = this.undoMoves.pop()
-						if (move) this.redoMoves.push(move)
-						return move
-					},
-				},
-				// ===== Card =============================================== Card ============================================
-				allCards() {
-					return Array.from(this.suits, suit => Array.from(this.ranks, rank => `${suit}${rank}`)).flat()
-				},
-				/**
-				 * @param {string} card
-				 */
-				cardDetails(card) {
-					const { suits, ranks } = this
-					const [suit, rank, turnedOver] = card
-					const suitI = suits.indexOf(suit)
-					const rankI = ranks.indexOf(rank) + 1
-					const color = suitI === -1 ? '' : suitI % 2 ? 'red' : 'black'
-					return { card: card.slice(0, 2), suit, rank, suitI, rankI, color, turnedOver: !!turnedOver }
-				},
-				// ===== Reset ============================================== Reset ===========================================
-				reset() {
-					const { suits, ranks, piles, history, onReset } = this
-					for (const pile in piles) piles[pile] = []
-					piles['draw'] = shuffle(this.allCards())
-					const numberPiles = Object.keys(piles).filter(Number)
-					for (let i = 0; i < numberPiles.length; i++) {
-						for (let j = i; j < numberPiles.length; j++) {
-							piles[numberPiles[j]].push(piles['draw'].pop())
-						}
-					}
-					history.undoMoves = []
-					history.redoMoves = []
-					onReset.call(this)
-				},
-				// ===== Move =============================================== Move ============================================
-				/**
-				 * @param {string} card
-				 * @param {string} source
-				 * @returns {string[]} - valid pile names
-				 */
-				validDestinations(card, source) {
-					const { suits, ranks, pilePrefOrder, peekLength, piles } = this
-					const cardI = piles[source].indexOf(card)
-					if (cardI === -1) throw new Error(`card "${card}" not in source "${source}"`)
-					if (source === 'draw')
-						return cardI - piles['draw'].length === -peekLength || //
-							(piles['draw'].length < peekLength && cardI === 0)
-							? ['peek']
-							: ''
-					const sourceCards = piles[source]
-					const movingCards = sourceCards.slice(cardI)
-					return pilePrefOrder.filter(destination => {
-						if (destination === source) return false
-						if (destination === 'draw') return source === 'peek' && cardI === 0
-						const destinationCards = piles[destination]
-						const cards = [...destinationCards.slice(-1), ...movingCards].map(card => this.cardDetails(card))
-						if (Number(destination)) {
-							if (destinationCards.length === 0) return cards[0].rank === ranks.at(-1) // start with King
-							return everyPair(
-								cards,
-								(prev, curr) =>
-									prev.rankI - 1 === curr.rankI && // rank descending
-									prev.color !== curr.color, // color alternate
-							)
-						}
-						if (destination === cards[0].suit) {
-							if (destinationCards.length === 0) return cards[0].rank === ranks.at(0) // start with Ace
-							return everyPair(
-								cards,
-								(prev, curr) =>
-									prev.rankI + 1 === curr.rankI && // rank ascending
-									prev.suit === curr.suit, // suit uniform
-							)
-						}
-					})
-				},
-				/**
-				 * @param {string} card
-				 * @param {string} source
-				 * @param {string} [destination] = validDestinations[0]
-				 * @param {'push'|'redo'|'undo'} [type] = 'push'
-				 * @returns {string[]|false} - cards moved or false
-				 */
-				move(card, source, destination, type = 'push') {
-					const { suits, ranks, piles, history, onMove } = this
-					if (false);
-					else if (type === 'redo') [card, source, destination] = history.redoMoves.at(-1)
-					else if (type === 'undo') [card, destination, source] = history.undoMoves.at(-1)
-					else if (type !== 'push') throw new Error(`Invalid move type "${type}"`)
-					const validDestinations = type === 'undo' ? [destination] : this.validDestinations(card, source)
-					if (!(destination ??= validDestinations[0])) return false
-					if (!validDestinations.includes(destination)) return false
-					const cardI = piles[source].indexOf(card)
-					const cards = piles[source].splice(cardI)
-					piles[destination].push(...cards)
-					history[type](card, source, destination)
-					onMove.call(this, cards, source, destination, type)
-					if (suits.includes(destination) && this.ended()) this.end()
-					return cards
-				},
-				moveRedo() {
-					return this.move(undefined, undefined, undefined, 'redo')
-				},
-				moveUndo() {
-					return this.move(undefined, undefined, undefined, 'undo')
-				},
-				moveDraw() {
-					const { peekLength, piles } = this
-					if (piles['draw'].length) {
-						return this.move(piles['draw'].slice(-peekLength)[0], 'draw', 'peek')
-					}
-					piles['peek'] = Array.from(
-						{ length: Math.ceil(piles['peek'].length / peekLength) }, //
-						(_, i) => piles['peek'].slice(i * peekLength, (i + 1) * peekLength),
-					)
-						.reverse()
-						.flat()
-					return this.move(piles['peek'][0], 'peek', 'draw')
-				},
-				// ===== End ================================================ End =============================================
-				ended() {
-					const { suits, piles } = this
-					return Object.keys(piles).every(pile => suits.includes(pile) || !piles[pile].length)
-				},
-				end() {
-					const { onEnd } = this
-					onEnd.call(this)
-				},
-				// ===== Events ============================================= Events ==========================================
-				/**
-				 * @param {string[]} cards
-				 * @param {string} source
-				 * @param {string} destination
-				 * @param {'push'|'redo'|'undo'} type
-				 */
-				onMove: function (cards, source, destination, type) {},
-				onReset: function () {},
-				onEnd: function () {},
-			}
-			// ======= Utils ============================================== Utils ===========================================
-			/** Shuffle an array in place
-			 * @template T
-			 * @param {T[]} items
-			 */
-			function shuffle(items) {
-				for (let i = items.length - 1; i > 0; i--) {
-					const j = Math.floor(Math.random() * (i + 1))
-					;[items[i], items[j]] = [items[j], items[i]]
-				}
-				return items
-			}
-			/**
-			 * @template T
-			 * @param {T[]} items
-			 * @param {(prev:T,curr:T)=>boolean} test
-			 * Returns true if items.length < 2
-			 */
-			function everyPair(items, test) {
-				for (let i = 1; i < items.length; i++) if (!test(items[i - 1], items[i])) return false
-				return true
-			}
-		</script>
-		<script title="Solitaire DOM">
-			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
-			/**
-			 * @this {Document}
-			 * @param {Event} event
-			 */
-			function onDOMContentLoaded(event) {
-				// ============================================================================================================
-				for (const pile of document.querySelectorAll('.pile')) {
-					pile.classList.toggle(Number(pile.id) ? `p${pile.id}` : pile.id, true)
-				}
-				for (const card of document.querySelectorAll('.card')) {
-					card.addEventListener('click', onClickCard)
-					const [suit, rank] = card.id
-					card.title = `${suit}${rank === 'X' ? 10 : rank}`
-					card.classList.toggle(suit, true)
-					card.classList.toggle(`r${rank}`, true)
-					card.draggable = true
-				}
-				document.getElementById('draw').addEventListener('click', onClickDraw)
-				document.addEventListener('dragstart', onDragStart)
-				document.addEventListener('dragover', onDragOver)
-				document.addEventListener('drop', onDrop)
-				solitaire.onReset = onReset
-				solitaire.onMove = onMove
-				solitaire.onEnd = onEnd
-				solitaire.reset()
-				return
-				// ============================================================================================================
-				/**
-				 * @this {HTMLElement}
-				 * @param {MouseEvent} event
-				 */
-				function onClickCard(event) {
-					/**@type {HTMLElement}*/
-					const card = event.target
-					const source = card.parentElement
-					const validDestinationIds = solitaire.validDestinations(card.id, source.id)
-					const destinationId = validDestinationIds[0]
-					const destination = document.getElementById(destinationId)
-					if (!destination) return
-					solitaire.move(card.id, source.id, destination.id)
-				}
-				/**
-				 * @this {HTMLElement}
-				 * @param {MouseEvent} event
-				 */
-				function onClickDraw(event) {
-					solitaire.moveDraw()
-				}
-				/**
-				 * @this {Document}
-				 * @param {DragEvent} event
-				 */
-				function onDragStart(event) {
-					/**@type {HTMLElement}*/
-					const card = event.target
-					if (!card.classList.contains('card')) return
-					const source = card.parentElement
-					if (!source.classList.contains('pile')) return
-					const eventData = `${card.id}:${solitaire.validDestinations(card.id, source.id).join(',')}`
-					event.dataTransfer.setData('text/plain', eventData)
-				}
-				/**
-				 * @this {Document}
-				 * @param {DragEvent} event
-				 */
-				function onDragOver(event) {
-					event.preventDefault()
-				}
-				/**
-				 * @this {Document}
-				 * @param {DragEvent} event
-				 */
-				function onDrop(event) {
-					/**@type {HTMLElement}*/
-					const destination = undefined
-						? undefined
-						: event.target.classList.contains('pile')
-						? event.target
-						: event.target.classList.contains('card')
-						? event.target.parentElement
-						: undefined
-					if (!destination?.classList.contains('pile')) return
-					const [cardId, validDestinationIdsText] = event.dataTransfer.getData('text/plain').split(':')
-					const validDestinationIds = validDestinationIdsText.split(',')
-					if (!validDestinationIds.includes(destination.id)) return
-					const card = document.getElementById(cardId)
-					const source = card.parentElement
-					solitaire.move(card.id, source.id, destination.id)
-				}
-				/**
-				 * @this {any}
-				 */
-				function onReset() {
-					const { piles } = solitaire
-					moveElementsSmooth(
-						Object.entries(piles).map(([pileId, cardIds]) => ({
-							elements: cardIds.map(cardId => document.getElementById(cardId)),
-							destination: document.getElementById(pileId),
-						})),
-					)
-					for (const card of document.querySelectorAll('.card')) {
-						card.classList.toggle('turned-over', false)
-					}
-					for (const card of document.querySelectorAll(
-						Object.keys(solitaire.piles)
-							.filter(Number)
-							.map(i => `#solitaire .pile.p${i} .card:not(:last-of-type)`)
-							.join(','),
-					)) {
-						card.classList.toggle('turned-over', true)
-					}
-				}
-				/**
-				 * @this {any}
-				 * @param {string[]} cardIds
-				 * @param {string} sourceId
-				 * @param {string} destinationId
-				 * @param {'push'|'redo'|'undo'} type
-				 */
-				function onMove(cardIds, sourceId, destinationId, type) {
-					const destination = document.getElementById(destinationId)
-					const destinationCards = [...destination.querySelectorAll('.card')]
-					const destinationTopCards = destinationCards.splice(-cardIds.length)
-					const source = document.getElementById(sourceId)
-					const sourceCards = [...source.querySelectorAll('.card')]
-					const sourceTopCards = sourceCards.splice(-cardIds.length * 2)
-					const sourceMovingCards = sourceTopCards.splice(-cardIds.length)
-					const cards = cardIds.map(id => document.getElementById(id))
-					/*Verify cards === sourceMovingCards not order sensitive*/ {
-						const cardSet = new Set(cards)
-						for (const card of sourceMovingCards) {
-							if (cardSet.has(card) && card.parentElement === source);
-							else throw new Error(`DOM de-sync`)
-							cardSet.delete(card)
-						}
-						if (cardSet.size) throw new Error(`DOM de-sync`)
-					}
-					sourceTopCards.at(-1)?.classList.toggle('turned-over', false)
-					moveElementsSmooth([
-						{ elements: sourceTopCards /*     */, destination: source /*     */ },
-						{ elements: destinationTopCards /**/, destination: destination /**/ },
-						{ elements: cards /*              */, destination: destination /**/ },
-					])
-				}
-				/**
-				 * @this {any}
-				 */
-				function onEnd() {
-					alert('win')
-				}
-				/** Move elements to their destinations with animation
-				 * @this {any}
-				 * @param {{elements:HTMLElement[], destination:HTMLElement}[]} moves
-				 * CSS changes for every element:
-				 * - .moving class applied
-				 * - --move-x set to the offset-x in px to get back to the position before moving
-				 * - --move-y set to the offset-y in px to get back to the position before moving
-				 * Property-and-class changes removed on animation end
-				 * Use .moving with --move-x and --move-y in CSS to style the animation
-				 */
-				function moveElementsSmooth(moves) {
-					const elementsWithRects = moves.flatMap(({ elements }) =>
-						elements.map(element => ({
-							element, //
-							rect: element.getBoundingClientRect(),
-						})),
-					)
-					for (const { elements, destination } of moves) {
-						destination.append(...elements)
-					}
-					for (const { element, rect: prevRect } of elementsWithRects) {
-						const currRect = element.getBoundingClientRect()
-						moveBegin()
-						function moveBegin() {
-							element.addEventListener('animationend', moveEnd, { once: true })
-							element.classList.toggle('moving', false)
-							element.style.setProperty('--move-x', prevRect.left - currRect.left)
-							element.style.setProperty('--move-y', prevRect.top - currRect.top)
-							element.classList.toggle('moving', true)
-						}
-						function moveEnd() {
-							element.classList.toggle('moving', true)
-							element.style.removeProperty('--move-x')
-							element.style.removeProperty('--move-y')
-							element.classList.toggle('moving', false)
-						}
-					}
-				}
-				// ============================================================================================================
-			}
-		</script>
-	</head>
-	<body>
-		<div id="solitaire">
-			<button onclick="solitaire.reset()" type="button">Reset</button>
-			<button onclick="solitaire.moveUndo()" type="button">Undo</button>
-			<button onclick="solitaire.moveRedo()" type="button">Redo</button>
-			<div id="piles" class="piles">
-				<div id="♠" class="pile">
-					<div id="♠A" class="card"></div>
-					<div id="♠2" class="card"></div>
-					<div id="♠3" class="card"></div>
-					<div id="♠4" class="card"></div>
-					<div id="♠5" class="card"></div>
-					<div id="♠6" class="card"></div>
-					<div id="♠7" class="card"></div>
-					<div id="♠8" class="card"></div>
-					<div id="♠9" class="card"></div>
-					<div id="♠X" class="card"></div>
-					<div id="♠J" class="card"></div>
-					<div id="♠Q" class="card"></div>
-					<div id="♠K" class="card"></div>
-				</div>
-				<div id="♥" class="pile">
-					<div id="♥A" class="card"></div>
-					<div id="♥2" class="card"></div>
-					<div id="♥3" class="card"></div>
-					<div id="♥4" class="card"></div>
-					<div id="♥5" class="card"></div>
-					<div id="♥6" class="card"></div>
-					<div id="♥7" class="card"></div>
-					<div id="♥8" class="card"></div>
-					<div id="♥9" class="card"></div>
-					<div id="♥X" class="card"></div>
-					<div id="♥J" class="card"></div>
-					<div id="♥Q" class="card"></div>
-					<div id="♥K" class="card"></div>
-				</div>
-				<div id="♣" class="pile">
-					<div id="♣A" class="card"></div>
-					<div id="♣2" class="card"></div>
-					<div id="♣3" class="card"></div>
-					<div id="♣4" class="card"></div>
-					<div id="♣5" class="card"></div>
-					<div id="♣6" class="card"></div>
-					<div id="♣7" class="card"></div>
-					<div id="♣8" class="card"></div>
-					<div id="♣9" class="card"></div>
-					<div id="♣X" class="card"></div>
-					<div id="♣J" class="card"></div>
-					<div id="♣Q" class="card"></div>
-					<div id="♣K" class="card"></div>
-				</div>
-				<div id="♦" class="pile">
-					<div id="♦A" class="card"></div>
-					<div id="♦2" class="card"></div>
-					<div id="♦3" class="card"></div>
-					<div id="♦4" class="card"></div>
-					<div id="♦5" class="card"></div>
-					<div id="♦6" class="card"></div>
-					<div id="♦7" class="card"></div>
-					<div id="♦8" class="card"></div>
-					<div id="♦9" class="card"></div>
-					<div id="♦X" class="card"></div>
-					<div id="♦J" class="card"></div>
-					<div id="♦Q" class="card"></div>
-					<div id="♦K" class="card"></div>
-				</div>
-				<div id="draw" class="pile"></div>
-				<div id="peek" class="pile"></div>
-				<div id="1" class="pile"></div>
-				<div id="2" class="pile"></div>
-				<div id="3" class="pile"></div>
-				<div id="4" class="pile"></div>
-				<div id="5" class="pile"></div>
-				<div id="6" class="pile"></div>
-				<div id="7" class="pile"></div>
-			</div>
-		</div>
-	</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Solitaire</title>
+    <style>
+      #solitaire {
+        --card-width: 3em;
+        --card-height: 5em;
+        --card-padding: 0.2em;
+        --card-border-radius: 0.4em;
+        --card-border-width: 0.1em;
+        display: grid;
+        grid-template: auto auto / auto auto auto;
+        justify-content: center;
+        align-items: center;
+        gap: 1em;
+      }
+      #solitaire .piles {
+        display: grid;
+        grid-column: span 3;
+        grid-template: auto auto / auto auto auto auto auto auto auto;
+        width: min-content;
+        height: min-content;
+        gap: 0.5em;
+      }
+      #solitaire .pile {
+        position: relative;
+        min-width: var(--card-width);
+        min-height: var(--card-height);
+        padding: 0;
+      }
+      #solitaire .pile::before {
+        content: attr(id);
+        display: block;
+        position: absolute;
+        text-align: center;
+        box-sizing: border-box;
+        left: 0;
+        right: 0;
+        padding-top: 1em;
+        box-sizing: border-box;
+        height: var(--card-height);
+        border: var(--card-border-width) solid #888;
+        border-radius: calc(var(--card-border-width) + var(--card-border-radius));
+        background: linear-gradient(-60deg, white 40%, currentColor, white 60%);
+        background-size: 100% 200%;
+      }
+      #solitaire .pile.peek {
+        width: unset;
+        min-width: var(--card-width);
+        grid-column: span 2;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      #solitaire .card {
+        -webkit-user-select: none;
+        user-select: none;
+        text-align: left;
+        position: relative;
+        box-sizing: border-box;
+        width: var(--card-width);
+        border-radius: var(--card-border-radius);
+        background: white;
+      }
+      #solitaire .card::before,
+      #solitaire .card::after {
+        background: inherit;
+        background-size: 10% 10%;
+        background-clip: border-box;
+        background-position: center;
+        content: attr(title);
+        color: inherit;
+        display: block;
+        border: var(--card-border-width) solid currentColor;
+        border-radius: inherit;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        border-bottom: none;
+        width: var(--card-width);
+        height: calc(var(--card-height) / 2);
+        padding: var(--card-padding);
+        box-sizing: inherit;
+      }
+      #solitaire .card::after {
+        transform: scale(-1);
+      }
+      #solitaire .pile.♠,
+      #solitaire .pile.♣,
+      #solitaire .card.♠,
+      #solitaire .card.♣ {
+        color: black;
+      }
+      #solitaire .pile.♥,
+      #solitaire .pile.♦,
+      #solitaire .card.♥,
+      #solitaire .card.♦ {
+        color: #d00;
+      }
+      #solitaire .pile.draw .card,
+      #solitaire .pile .card.turned-over {
+        background: linear-gradient(-30deg, white 40%, currentColor, white 60%);
+        border-color: black;
+        pointer-events: none;
+        color: black;
+      }
+      #solitaire .pile.peek .card:not(:last-of-type) {
+        width: calc(var(--card-width) / 2);
+      }
+      #solitaire .pile.♠ .card:not(:last-of-type),
+      #solitaire .pile.♥ .card:not(:last-of-type),
+      #solitaire .pile.♣ .card:not(:last-of-type),
+      #solitaire .pile.♦ .card:not(:last-of-type),
+      #solitaire .pile.draw .card:not(:last-of-type),
+      #solitaire .pile.peek .card:not(:nth-last-of-type(-n + 3)) {
+        position: absolute;
+      }
+      #solitaire .pile.p1 .card:not(:last-of-type),
+      #solitaire .pile.p2 .card:not(:last-of-type),
+      #solitaire .pile.p3 .card:not(:last-of-type),
+      #solitaire .pile.p4 .card:not(:last-of-type),
+      #solitaire .pile.p5 .card:not(:last-of-type),
+      #solitaire .pile.p6 .card:not(:last-of-type),
+      #solitaire .pile.p7 .card:not(:last-of-type) {
+        height: calc(var(--card-padding) * 2 + 1.1em);
+      }
+      #solitaire .pile .card.turned-over::before,
+      #solitaire .pile .card.turned-over::after,
+      #solitaire .pile.draw .card::before,
+      #solitaire .pile.draw .card::after {
+        content: '';
+      }
+      @keyframes move {
+        from {
+          transform: translate(calc(var(--move-x) * 1px), calc(var(--move-y) * 1px));
+        }
+      }
+      #solitaire .moving {
+        animation: move 0.2s ease-in-out forwards;
+        z-index: 10;
+      }
+    </style>
+    <script title="Solitaire Game">
+      const solitaireSuits = '♠♥♣♦'
+      const solitaireRanks = 'A23456789XJQK'
+      const solitairePeekLength = 3
+      const solitairePiles = [
+        ...solitaireSuits,
+        ...Array.from({ length: 7 }, (_, i) => String(1 + i)),
+        ...['peek', 'draw']
+      ]
+      const solitaire = {
+        // ===== Data =============================================== Data ============================================
+        suits: solitaireSuits,
+        ranks: solitaireRanks,
+        pilePrefOrder: solitairePiles,
+        peekLength: solitairePeekLength,
+        piles: Object.fromEntries(solitairePiles.map(pile => [pile, [''].slice(1)])),
+        history: {
+          undoMoves: [['']].slice(1),
+          redoMoves: [['']].slice(1),
+          /**
+           * @param {string} card
+           * @param {string} source
+           * @param {string} destination
+           */
+          push(card, source, destination) {
+            this.redoMoves = [[card, source, destination]]
+            return this.redo()
+          },
+          redo() {
+            const move = this.redoMoves.pop()
+            if (move) this.undoMoves.push(move)
+            return move
+          },
+          undo() {
+            const move = this.undoMoves.pop()
+            if (move) this.redoMoves.push(move)
+            return move
+          }
+        },
+        // ===== Card =============================================== Card ============================================
+        allCards() {
+          return Array.from(this.suits, suit => Array.from(this.ranks, rank => `${suit}${rank}`)).flat()
+        },
+        /**
+         * @param {string} card
+         */
+        cardDetails(card) {
+          const { suits, ranks } = this
+          const [suit, rank, turnedOver] = card
+          const suitI = suits.indexOf(suit)
+          const rankI = ranks.indexOf(rank) + 1
+          const color = suitI === -1 ? '' : suitI % 2 ? 'red' : 'black'
+          return { card: card.slice(0, 2), suit, rank, suitI, rankI, color, turnedOver: !!turnedOver }
+        },
+        // ===== Reset ============================================== Reset ===========================================
+        reset() {
+          const { suits, ranks, piles, history, onReset } = this
+          for (const pile in piles) piles[pile] = []
+          piles['draw'] = shuffle(this.allCards())
+          const numberPiles = Object.keys(piles).filter(Number)
+          for (let i = 0; i < numberPiles.length; i++) {
+            for (let j = i; j < numberPiles.length; j++) {
+              piles[numberPiles[j]].push(piles['draw'].pop())
+            }
+          }
+          history.undoMoves = []
+          history.redoMoves = []
+          onReset.call(this)
+        },
+        // ===== Move =============================================== Move ============================================
+        /**
+         * @param {string} card
+         * @param {string} source
+         * @returns {string[]} - valid pile names
+         */
+        validDestinations(card, source) {
+          const { suits, ranks, pilePrefOrder, peekLength, piles } = this
+          const cardI = piles[source].indexOf(card)
+          if (cardI === -1) throw new Error(`card "${card}" not in source "${source}"`)
+          if (source === 'draw')
+            return cardI - piles['draw'].length === -peekLength || //
+              (piles['draw'].length < peekLength && cardI === 0)
+              ? ['peek']
+              : ''
+          const sourceCards = piles[source]
+          const movingCards = sourceCards.slice(cardI)
+          return pilePrefOrder.filter(destination => {
+            if (destination === source) return false
+            if (destination === 'draw') return source === 'peek' && cardI === 0
+            const destinationCards = piles[destination]
+            const cards = [...destinationCards.slice(-1), ...movingCards].map(card => this.cardDetails(card))
+            if (Number(destination)) {
+              if (destinationCards.length === 0) return cards[0].rank === ranks.at(-1) // start with King
+              return everyPair(
+                cards,
+                (prev, curr) =>
+                  prev.rankI - 1 === curr.rankI && // rank descending
+                  prev.color !== curr.color // color alternate
+              )
+            }
+            if (destination === cards[0].suit) {
+              if (destinationCards.length === 0) return cards[0].rank === ranks.at(0) // start with Ace
+              return everyPair(
+                cards,
+                (prev, curr) =>
+                  prev.rankI + 1 === curr.rankI && // rank ascending
+                  prev.suit === curr.suit // suit uniform
+              )
+            }
+          })
+        },
+        /**
+         * @param {string} card
+         * @param {string} source
+         * @param {string} [destination] = validDestinations[0]
+         * @param {'push'|'redo'|'undo'} [type] = 'push'
+         * @returns {string[]|false} - cards moved or false
+         */
+        move(card, source, destination, type = 'push') {
+          const { suits, ranks, piles, history, onMove } = this
+          if (false);
+          else if (type === 'redo') [card, source, destination] = history.redoMoves.at(-1)
+          else if (type === 'undo') [card, destination, source] = history.undoMoves.at(-1)
+          else if (type !== 'push') throw new Error(`Invalid move type "${type}"`)
+          const validDestinations = type === 'undo' ? [destination] : this.validDestinations(card, source)
+          if (!(destination ??= validDestinations[0])) return false
+          if (!validDestinations.includes(destination)) return false
+          const cardI = piles[source].indexOf(card)
+          const cards = piles[source].splice(cardI)
+          piles[destination].push(...cards)
+          history[type](card, source, destination)
+          onMove.call(this, cards, source, destination, type)
+          if (suits.includes(destination) && this.ended()) this.end()
+          return cards
+        },
+        moveRedo() {
+          return this.move(undefined, undefined, undefined, 'redo')
+        },
+        moveUndo() {
+          return this.move(undefined, undefined, undefined, 'undo')
+        },
+        moveDraw() {
+          const { peekLength, piles } = this
+          if (piles['draw'].length) {
+            return this.move(piles['draw'].slice(-peekLength)[0], 'draw', 'peek')
+          }
+          piles['peek'] = Array.from(
+            { length: Math.ceil(piles['peek'].length / peekLength) }, //
+            (_, i) => piles['peek'].slice(i * peekLength, (i + 1) * peekLength)
+          )
+            .reverse()
+            .flat()
+          return this.move(piles['peek'][0], 'peek', 'draw')
+        },
+        // ===== End ================================================ End =============================================
+        ended() {
+          const { suits, piles } = this
+          return Object.keys(piles).every(pile => suits.includes(pile) || !piles[pile].length)
+        },
+        end() {
+          const { onEnd } = this
+          onEnd.call(this)
+        },
+        // ===== Events ============================================= Events ==========================================
+        /**
+         * @param {string[]} cards
+         * @param {string} source
+         * @param {string} destination
+         * @param {'push'|'redo'|'undo'} type
+         */
+        onMove: function (cards, source, destination, type) {},
+        onReset: function () {},
+        onEnd: function () {}
+      }
+      // ======= Utils ============================================== Utils ===========================================
+      /** Shuffle an array in place
+       * @template T
+       * @param {T[]} items
+       */
+      function shuffle(items) {
+        for (let i = items.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[items[i], items[j]] = [items[j], items[i]]
+        }
+        return items
+      }
+      /**
+       * @template T
+       * @param {T[]} items
+       * @param {(prev:T,curr:T)=>boolean} test
+       * Returns true if items.length < 2
+       */
+      function everyPair(items, test) {
+        for (let i = 1; i < items.length; i++) if (!test(items[i - 1], items[i])) return false
+        return true
+      }
+    </script>
+    <script title="Solitaire DOM">
+      document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
+      /**
+       * @this {Document}
+       * @param {Event} event
+       */
+      function onDOMContentLoaded(event) {
+        // ============================================================================================================
+        for (const pile of document.querySelectorAll('.pile')) {
+          pile.classList.toggle(Number(pile.id) ? `p${pile.id}` : pile.id, true)
+        }
+        for (const card of document.querySelectorAll('.card')) {
+          card.addEventListener('click', onClickCard)
+          const [suit, rank] = card.id
+          card.title = `${suit}${rank === 'X' ? 10 : rank}`
+          card.classList.toggle(suit, true)
+          card.classList.toggle(`r${rank}`, true)
+          card.draggable = true
+        }
+        document.getElementById('draw').addEventListener('click', onClickDraw)
+        document.addEventListener('dragstart', onDragStart)
+        document.addEventListener('dragover', onDragOver)
+        document.addEventListener('drop', onDrop)
+        solitaire.onReset = onReset
+        solitaire.onMove = onMove
+        solitaire.onEnd = onEnd
+        solitaire.reset()
+        return
+        // ============================================================================================================
+        /**
+         * @this {HTMLElement}
+         * @param {MouseEvent} event
+         */
+        function onClickCard(event) {
+          /**@type {HTMLElement}*/
+          const card = event.target
+          const source = card.parentElement
+          const validDestinationIds = solitaire.validDestinations(card.id, source.id)
+          const destinationId = validDestinationIds[0]
+          const destination = document.getElementById(destinationId)
+          if (!destination) return
+          solitaire.move(card.id, source.id, destination.id)
+        }
+        /**
+         * @this {HTMLElement}
+         * @param {MouseEvent} event
+         */
+        function onClickDraw(event) {
+          solitaire.moveDraw()
+        }
+        /**
+         * @this {Document}
+         * @param {DragEvent} event
+         */
+        function onDragStart(event) {
+          /**@type {HTMLElement}*/
+          const card = event.target
+          if (!card.classList.contains('card')) return
+          const source = card.parentElement
+          if (!source.classList.contains('pile')) return
+          const eventData = `${card.id}:${solitaire.validDestinations(card.id, source.id).join(',')}`
+          event.dataTransfer.setData('text/plain', eventData)
+        }
+        /**
+         * @this {Document}
+         * @param {DragEvent} event
+         */
+        function onDragOver(event) {
+          event.preventDefault()
+        }
+        /**
+         * @this {Document}
+         * @param {DragEvent} event
+         */
+        function onDrop(event) {
+          /**@type {HTMLElement}*/
+          const destination = undefined
+            ? undefined
+            : event.target.classList.contains('pile')
+            ? event.target
+            : event.target.classList.contains('card')
+            ? event.target.parentElement
+            : undefined
+          if (!destination?.classList.contains('pile')) return
+          const [cardId, validDestinationIdsText] = event.dataTransfer.getData('text/plain').split(':')
+          const validDestinationIds = validDestinationIdsText.split(',')
+          if (!validDestinationIds.includes(destination.id)) return
+          const card = document.getElementById(cardId)
+          const source = card.parentElement
+          solitaire.move(card.id, source.id, destination.id)
+        }
+        /**
+         * @this {any}
+         */
+        function onReset() {
+          const { piles } = solitaire
+          moveElementsSmooth(
+            Object.entries(piles).map(([pileId, cardIds]) => ({
+              elements: cardIds.map(cardId => document.getElementById(cardId)),
+              destination: document.getElementById(pileId)
+            }))
+          )
+          for (const card of document.querySelectorAll('.card')) {
+            card.classList.toggle('turned-over', false)
+          }
+          for (const card of document.querySelectorAll(
+            Object.keys(solitaire.piles)
+              .filter(Number)
+              .map(i => `#solitaire .pile.p${i} .card:not(:last-of-type)`)
+              .join(',')
+          )) {
+            card.classList.toggle('turned-over', true)
+          }
+        }
+        /**
+         * @this {any}
+         * @param {string[]} cardIds
+         * @param {string} sourceId
+         * @param {string} destinationId
+         * @param {'push'|'redo'|'undo'} type
+         */
+        function onMove(cardIds, sourceId, destinationId, type) {
+          const destination = document.getElementById(destinationId)
+          const destinationCards = [...destination.querySelectorAll('.card')]
+          const destinationTopCards = destinationCards.splice(-cardIds.length)
+          const source = document.getElementById(sourceId)
+          const sourceCards = [...source.querySelectorAll('.card')]
+          const sourceTopCards = sourceCards.splice(-cardIds.length * 2)
+          const sourceMovingCards = sourceTopCards.splice(-cardIds.length)
+          const cards = cardIds.map(id => document.getElementById(id))
+          /*Verify cards === sourceMovingCards not order sensitive*/ {
+            const cardSet = new Set(cards)
+            for (const card of sourceMovingCards) {
+              if (cardSet.has(card) && card.parentElement === source);
+              else throw new Error(`DOM de-sync`)
+              cardSet.delete(card)
+            }
+            if (cardSet.size) throw new Error(`DOM de-sync`)
+          }
+          sourceTopCards.at(-1)?.classList.toggle('turned-over', false)
+          moveElementsSmooth([
+            { elements: sourceTopCards /*     */, destination: source /*     */ },
+            { elements: destinationTopCards /**/, destination: destination /**/ },
+            { elements: cards /*              */, destination: destination /**/ }
+          ])
+        }
+        /**
+         * @this {any}
+         */
+        function onEnd() {
+          alert('win')
+        }
+        /** Move elements to their destinations with animation
+         * @this {any}
+         * @param {{elements:HTMLElement[], destination:HTMLElement}[]} moves
+         * CSS changes for every element:
+         * - .moving class applied
+         * - --move-x set to the offset-x in px to get back to the position before moving
+         * - --move-y set to the offset-y in px to get back to the position before moving
+         * Property-and-class changes removed on animation end
+         * Use .moving with --move-x and --move-y in CSS to style the animation
+         */
+        function moveElementsSmooth(moves) {
+          const elementsWithRects = moves.flatMap(({ elements }) =>
+            elements.map(element => ({
+              element, //
+              rect: element.getBoundingClientRect()
+            }))
+          )
+          for (const { elements, destination } of moves) {
+            destination.append(...elements)
+          }
+          for (const { element, rect: prevRect } of elementsWithRects) {
+            const currRect = element.getBoundingClientRect()
+            moveBegin()
+            function moveBegin() {
+              element.addEventListener('animationend', moveEnd, { once: true })
+              element.classList.toggle('moving', false)
+              element.style.setProperty('--move-x', prevRect.left - currRect.left)
+              element.style.setProperty('--move-y', prevRect.top - currRect.top)
+              element.classList.toggle('moving', true)
+            }
+            function moveEnd() {
+              element.classList.toggle('moving', true)
+              element.style.removeProperty('--move-x')
+              element.style.removeProperty('--move-y')
+              element.classList.toggle('moving', false)
+            }
+          }
+        }
+        // ============================================================================================================
+      }
+    </script>
+  </head>
+  <body>
+    <div id="solitaire">
+      <button onclick="solitaire.reset()" type="button">Reset</button>
+      <button onclick="solitaire.moveUndo()" type="button">Undo</button>
+      <button onclick="solitaire.moveRedo()" type="button">Redo</button>
+      <div id="piles" class="piles">
+        <div id="♠" class="pile">
+          <div id="♠A" class="card"></div>
+          <div id="♠2" class="card"></div>
+          <div id="♠3" class="card"></div>
+          <div id="♠4" class="card"></div>
+          <div id="♠5" class="card"></div>
+          <div id="♠6" class="card"></div>
+          <div id="♠7" class="card"></div>
+          <div id="♠8" class="card"></div>
+          <div id="♠9" class="card"></div>
+          <div id="♠X" class="card"></div>
+          <div id="♠J" class="card"></div>
+          <div id="♠Q" class="card"></div>
+          <div id="♠K" class="card"></div>
+        </div>
+        <div id="♥" class="pile">
+          <div id="♥A" class="card"></div>
+          <div id="♥2" class="card"></div>
+          <div id="♥3" class="card"></div>
+          <div id="♥4" class="card"></div>
+          <div id="♥5" class="card"></div>
+          <div id="♥6" class="card"></div>
+          <div id="♥7" class="card"></div>
+          <div id="♥8" class="card"></div>
+          <div id="♥9" class="card"></div>
+          <div id="♥X" class="card"></div>
+          <div id="♥J" class="card"></div>
+          <div id="♥Q" class="card"></div>
+          <div id="♥K" class="card"></div>
+        </div>
+        <div id="♣" class="pile">
+          <div id="♣A" class="card"></div>
+          <div id="♣2" class="card"></div>
+          <div id="♣3" class="card"></div>
+          <div id="♣4" class="card"></div>
+          <div id="♣5" class="card"></div>
+          <div id="♣6" class="card"></div>
+          <div id="♣7" class="card"></div>
+          <div id="♣8" class="card"></div>
+          <div id="♣9" class="card"></div>
+          <div id="♣X" class="card"></div>
+          <div id="♣J" class="card"></div>
+          <div id="♣Q" class="card"></div>
+          <div id="♣K" class="card"></div>
+        </div>
+        <div id="♦" class="pile">
+          <div id="♦A" class="card"></div>
+          <div id="♦2" class="card"></div>
+          <div id="♦3" class="card"></div>
+          <div id="♦4" class="card"></div>
+          <div id="♦5" class="card"></div>
+          <div id="♦6" class="card"></div>
+          <div id="♦7" class="card"></div>
+          <div id="♦8" class="card"></div>
+          <div id="♦9" class="card"></div>
+          <div id="♦X" class="card"></div>
+          <div id="♦J" class="card"></div>
+          <div id="♦Q" class="card"></div>
+          <div id="♦K" class="card"></div>
+        </div>
+        <div id="draw" class="pile"></div>
+        <div id="peek" class="pile"></div>
+        <div id="1" class="pile"></div>
+        <div id="2" class="pile"></div>
+        <div id="3" class="pile"></div>
+        <div id="4" class="pile"></div>
+        <div id="5" class="pile"></div>
+        <div id="6" class="pile"></div>
+        <div id="7" class="pile"></div>
+      </div>
+    </div>
+  </body>
 </html>

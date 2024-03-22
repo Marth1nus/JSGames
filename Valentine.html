@@ -1,194 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Valentine</title>
-  <script>
-    const valentineGame = {
-      noCount: -1,
-
-      onAnswer(event) {
-        const button = event.target
-        const answer = 
-          button.classList.contains('yes') ? 'yes' :
-          button.classList.contains('no' ) ? 'no'  :
-          undefined
-        const { yes, no, icon, question, icons, music } = this.dom
-        if (answer === 'yes') {
-          question.textContent = '❤️ YAY ❤️'
-          yes.parentNode.replaceChildren(`You said no ${this.noCount} times before saying yes XD`)
-          this.noCount = 0
-          music.yippee.play()
-          let imageIndex = 0
-          const imgs = [
-            icons.flusteredPunch,
-            icons.satisfiedDance,
-            icons.loveHug,
-            icons.blowingKissesAttack,
-            icons.hugAttack,
-          ]
-          const nextImage = async () => {
-            this.dom.icon = imgs[imageIndex++] ?? imgs[imageIndex = 0]
-            setTimeout(nextImage, 4000)
-          }
-          nextImage()
-          if (music.wiiSports.paused) {
-            music.wiiSports.currentTime = 0
-            music.wiiSports.volume = 0.5
-            music.wiiSports.loop = true
-            music.wiiSports.play()
-            music.wiiShopping.pause()
-          }
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Valentine</title>
+		<style>
+			body {
+				display: flex;
+				justify-content: space-around;
+				margin: 4vmin;
+			}
+			.question {
+				outline: 1vmin double pink;
+				padding: 2vmin;
+				border-radius: 8vmin;
+				font-size: 4vmin;
+				font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+				text-align: center;
+			}
+			.question > * {
+				display: flex;
+				justify-content: space-around;
+			}
+			.answer {
+				display: none;
+				display: inline-flex;
+				padding: 2vmin;
+				border-radius: 10vmin;
+				border: 1px solid white;
+				font-size: inherit;
+				transition: all 0.1s ease-in-out;
+				justify-content: center;
+				margin: 2vmin;
+			}
+			.answer:hover {
+				outline: 1vmin dotted pink;
+			}
+			.yes {
+				background-color: pink;
+			}
+			.yes:hover {
+				background-image: radial-gradient(red, pink, white, pink, red);
+				transition: all 0.1s ease-in-out;
+			}
+			.no {
+				background-color: red;
+			}
+			.no:hover {
+				background-color: transparent;
+				background-image: linear-gradient(transparent, red, transparent);
+				margin-top: 10%;
+				transition: all 0.1s ease-out;
+			}
+			img {
+				height: 50vmin;
+			}
+			#hidden-resources {
+				display: none;
+			}
+		</style>
+		<script>
+			const valentineGame = {
+				noCount: -1,
+				yes() {
+					const { yes, no, icon, question, icons, music } = this.dom
+					question.textContent = '❤️ YAY ❤️'
+					yes.parentNode.replaceChildren(`You said no ${this.noCount} times before saying yes XD`)
+					this.noCount = 0
+					music.yippee.play()
+					let imageIndex = 0
+					const imgs = [
+						icons.flusteredPunch,
+						icons.satisfiedDance,
+						icons.loveHug,
+						icons.blowingKissesAttack,
+						icons.hugAttack
+					]
+					const nextImage = async () => {
+						this.dom.icon = imgs[imageIndex++] ?? imgs[(imageIndex = 0)]
+						setTimeout(nextImage, 4000)
+					}
+					nextImage()
+					if (music.wiiSports.paused) {
+						music.wiiSports.currentTime = 0
+						music.wiiSports.volume = 0.5
+						music.wiiSports.loop = true
+						music.wiiSports.play()
+						music.wiiShopping.pause()
+					}
+				},
+				no() {
+					const { yes, no, icon, question, icons, music } = this.dom
+					question.textContent = '❤️ Will you be my Valentine? ❤️'
+					yes.style.padding = `2vmin ${2 + this.noCount}vmin 2vmin`
+					const imgProgression = [
+						icons.flusteredOnPhone,
+						icons.confidentPlease,
+						icons.flusteredTipToe,
+						icons.handHoldPlease,
+						icons.blowingKissesAttack,
+						icons.disgustedConfused,
+						icons.angryLookAway,
+						icons.consolationHeadPat
+					]
+					const prevImg = icon.querySelector('img')
+					const newImg = imgProgression[this.noCount++ / 3] ?? prevImg
+					if (prevImg != newImg) {
+						icon.replaceChildren(newImg)
+						;(newImg === imgProgression.at(-1) //
+							? music.hkCaterpillar
+							: music.oof
+						).play()
+					}
+					if (music.wiiShopping.paused) {
+						music.wiiShopping.currentTime = 0
+						music.wiiShopping.volume = 0.2
+						music.wiiShopping.loop = true
+						music.wiiShopping.play()
+						music.wiiSports.pause()
+					}
+				},
+				// prettier-ignore
+				dom: {
+          get icon     () { return this.querySelector('.icon') },
+          get yes      () { return this.querySelector('.yes ') },
+          get no       () { return this.querySelector('.no  ') },
+          get question () { return this.querySelector('h1   ') },
+          /**@returns {HTMLElement} @param {string} selector*/
+          querySelector(selector) { return document.querySelector(`.question ${selector}`) },
+          icons: {
+            get flusteredOnPhone    () { return this.querySelector('flustered-on-phone   ') },
+            get flusteredTipToe     () { return this.querySelector('flustered-tip-toe    ') },
+            get loveHug             () { return this.querySelector('love-hug             ') },
+            get blowingKissesAttack () { return this.querySelector('blowing-kisses-attack') },
+            get hugAttack           () { return this.querySelector('hug-attack           ') },
+            get consolationHeadPat  () { return this.querySelector('consolation-head-pat ') },
+            get handHoldPlease      () { return this.querySelector('hand-hold-please     ') },
+            get flusteredPunch      () { return this.querySelector('flustered-punch      ') },
+            get satisfiedDance      () { return this.querySelector('satisfied-dance      ') },
+            get disgustedConfused   () { return this.querySelector('disgusted-confused   ') },
+            get confidentPlease     () { return this.querySelector('confident-please     ') },
+            get angryLookAway       () { return this.querySelector('angry-look-away      ') },
+            /**@returns {HTMLImgElement} @param {string} name*/
+            querySelector(name) { return document.querySelector(`#hidden-resources img.${name}`).cloneNode(false) },
+          },
+          music: {
+            get wiiShopping   () { return this.querySelector('wii-shopping  ') },
+            get wiiSports     () { return this.querySelector('wii-sports    ') },
+            get yippee        () { return this.querySelector('yippee        ') },
+            get oof           () { return this.querySelector('oof           ') },
+            get hkCaterpillar () { return this.querySelector('hk-caterpillar') },
+            /**@returns {HTMLAudioElement} @param {string} name*/
+            querySelector(name) { return document.querySelector(`#hidden-resources audio.${name.trim()}`) },
+          },
         }
-        if (answer === 'no') {
-          question.textContent = '❤️ Will you be my Valentine? ❤️'
-          yes.style.padding  = `2vmin ${2 + this.noCount}vmin 2vmin`
-          const imgProgression = [
-            icons.flusteredOnPhone,
-            icons.confidentPlease,
-            icons.flusteredTipToe,
-            icons.handHoldPlease,
-            icons.blowingKissesAttack,
-            icons.disgustedConfused,
-            icons.angryLookAway,
-            icons.consolationHeadPat,
-          ]
-          const prevImg = icon.querySelector('img')
-          const newImg = imgProgression[this.noCount++ / 3] ?? prevImg
-          if (prevImg != newImg) {
-            icon.replaceChildren(newImg)
-            if (newImg === imgProgression.at(-1)) {
-              music.hkCaterpillar.play()
-            } else {
-              music.oof.play()
-            }
-          }
-          if (music.wiiShopping.paused) {
-            music.wiiShopping.currentTime = 0
-            music.wiiShopping.volume = 0.2
-            music.wiiShopping.loop = true
-            music.wiiShopping.play()
-            music.wiiSports.pause()
-          }
-        }
-      },
-
-      dom: {
-        set icon(value) { return this.icon.replaceChildren(value) },
-        get yes     () { return document.querySelector('.yes             ') },
-        get no      () { return document.querySelector('.no              ') },
-        get icon    () { return document.querySelector('.question > .icon') },
-        get question() { return document.querySelector('h1') },
-        icons: {
-          get flusteredOnPhone    () { return document.querySelector('.icon-img.flustered-on-phone   ').cloneNode(false) },
-          get flusteredTipToe     () { return document.querySelector('.icon-img.flustered-tip-toe    ').cloneNode(false) },
-          get loveHug             () { return document.querySelector('.icon-img.love-hug             ').cloneNode(false) },
-          get blowingKissesAttack () { return document.querySelector('.icon-img.blowing-kisses-attack').cloneNode(false) },
-          get hugAttack           () { return document.querySelector('.icon-img.hug-attack           ').cloneNode(false) },
-          get consolationHeadPat  () { return document.querySelector('.icon-img.consolation-head-pat ').cloneNode(false) },
-          get handHoldPlease      () { return document.querySelector('.icon-img.hand-hold-please     ').cloneNode(false) },
-          get flusteredPunch      () { return document.querySelector('.icon-img.flustered-punch      ').cloneNode(false) },
-          get satisfiedDance      () { return document.querySelector('.icon-img.satisfied-dance      ').cloneNode(false) },
-          get disgustedConfused   () { return document.querySelector('.icon-img.disgusted-confused   ').cloneNode(false) },
-          get confidentPlease     () { return document.querySelector('.icon-img.confident-please     ').cloneNode(false) },
-          get angryLookAway       () { return document.querySelector('.icon-img.angry-look-away      ').cloneNode(false) },
-        },
-        music: {
-          wiiShopping: new Audio('https://vgmsite.com/soundtracks/wii-music-collection/mqwcxcbzcc/07.%20Shop%20Channel.mp3'),
-          wiiSports: new Audio('https://vgmsite.com/soundtracks/wii-music-collection/ganfxgskdk/08.%20Title%20%28Wii%20Sports%29.mp3'),
-          yippee: new Audio('https://www.myinstants.com/media/sounds/yippee-meme-sound-effect.mp3'),
-          oof: new Audio('https://www.myinstants.com/media/sounds/roblox-death-sound_1.mp3'),
-          hkCaterpillar: new Audio('https://www.myinstants.com/media/sounds/caterpillar_hollow_knight.mp3'),
-        }
-      },
-    }
-  </script>
-  <style>
-    body {
-      display: flex;
-      justify-content: space-around;
-      margin: 4vmin;
-    }
-
-    .question {
-      outline: 1vmin double pink;
-      padding: 2vmin;
-      border-radius: 8vmin;
-      font-size: 4vmin;
-      font-family:'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-      text-align: center;
-    }
-
-    .question > * {
-      display: flex;
-      justify-content: space-around;
-    }
-
-    .answer {
-      display: none;
-      display: inline-flex;
-      padding: 2vmin;
-      border-radius: 10vmin;
-      border: 1px solid white;
-      font-size: inherit;
-      transition: all 0.1s ease-in-out;
-      justify-content: center;
-      margin: 2vmin;
-    }
-
-    .answer:hover {
-      outline: 1vmin dotted pink;
-    }
-
-    .yes {
-      background-color: pink;
-    }
-
-    .yes:hover {
-      background-image: radial-gradient(red, pink, white, pink, red);
-      transition: all 0.1s ease-in-out;
-    }
-
-    .no {
-      background-color: red;
-    }
-
-    .no:hover {
-      background-color: transparent;
-      background-image: linear-gradient(transparent, red, transparent);
-      margin-top: 10%;
-      transition: all 0.1s ease-out;
-    }
-
-    img {
-      height:50vmin
-    }
-  </style>
-</head>
-<body>
-  <div id="hidden-resources" style="display: none;">
-    <img class="icon-img flustered-on-phone"    alt="flustered-on-phone"    async src="https://media.tenor.com/PVJev3UoMzMAAAAi/uwu.gif" loading="lazy"/>
-    <img class="icon-img flustered-tip-toe"     alt="flustered-tip-toe"     async src="https://media.tenor.com/hpgCwxnBaK8AAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img love-hug"              alt="love-hug"              async src="https://media.tenor.com/kgZnQRqOZqkAAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img blowing-kisses-attack" alt="blowing-kisses-attack" async src="https://media.tenor.com/o2iDlb2KAtIAAAAi/milk-mocha-bear-kisses.gif" loading="lazy"/>
-    <img class="icon-img hug-attack"            alt="hug-attack"            async src="https://media.tenor.com/ICmg8MUfSg8AAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img consolation-head-pat"  alt="consolation-head-pat"  async src="https://media.tenor.com/hTFz1CU9ljcAAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img hand-hold-please"      alt="hand-hold-please"      async src="https://media.tenor.com/w8yxWaatwLIAAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img flustered-punch"       alt="flustered-punch"       async src="https://media.tenor.com/1CCNmtTzaSsAAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img satisfied-dance"       alt="satisfied-dance"       async src="https://media.tenor.com/O-tKN4NYQOsAAAAi/milk-mocha-dance.gif" loading="lazy"/>
-    <img class="icon-img disgusted-confused"    alt="disgusted-confused"    async src="https://media.tenor.com/KJ-ArgsmXwgAAAAi/milk-mocha-confused-milk-mocha-bear.gif" loading="lazy"/>
-    <img class="icon-img confident-please"      alt="confident-please"      async src="https://media.tenor.com/Idr_-NLOu8oAAAAi/milk-and-mocha.gif" loading="lazy"/>
-    <img class="icon-img angry-look-away"       alt="angry-look-away"       async src="https://media.tenor.com/qF1cFP9WVN8AAAAi/milk-and-mocha-mad.gif" loading="lazy"/>
-  </div>
-  <main class="question">
-    <h1>❤️ Will you be my Valentine? ❤️</h1>
-    <div class="icon"><script>valentineGame.dom.icon = valentineGame.dom.icons.confidentPlease</script></div>
-    <span>
-      <button class="answer yes" onclick="valentineGame.onAnswer(event)">💞 Yes 💘</button>
-      <button class="answer no"  onclick="valentineGame.onAnswer(event)">💔 No  ❤️‍🩹</button>
-      <script>document.currentScript.parentElement.querySelector('.no').click()</script>
-    </span>
-  </main>
-</body>
+			}
+			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
+			function onDOMContentLoaded() {
+				valentineGame.dom.yes.addEventListener('click', event => valentineGame.yes())
+				valentineGame.dom.no.addEventListener('click', event => valentineGame.no())
+        valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
+				valentineGame.no()
+			}
+		</script>
+	</head>
+	<body>
+		<main class="question">
+			<h1>❤️ Will you be my Valentine? ❤️</h1>
+			<div class="icon"></div>
+			<span>
+				<button type="button" class="answer yes">💞 Yes 💘</button>
+				<button type="button" class="answer no">💔 No ❤️‍🩹</button>
+			</span>
+			<!-- prettier-ignore -->
+			<div id="hidden-resources">
+        <img   class="flustered-on-phone"    alt="flustered-on-phone"    src="https://media.tenor.com/PVJev3UoMzMAAAAi/uwu.gif"/>
+        <img   class="flustered-tip-toe"     alt="flustered-tip-toe"     src="https://media.tenor.com/hpgCwxnBaK8AAAAi/milk-and-mocha.gif"/>
+        <img   class="love-hug"              alt="love-hug"              src="https://media.tenor.com/kgZnQRqOZqkAAAAi/milk-and-mocha.gif"/>
+        <img   class="blowing-kisses-attack" alt="blowing-kisses-attack" src="https://media.tenor.com/o2iDlb2KAtIAAAAi/milk-mocha-bear-kisses.gif"/>
+        <img   class="hug-attack"            alt="hug-attack"            src="https://media.tenor.com/ICmg8MUfSg8AAAAi/milk-and-mocha.gif"/>
+        <img   class="consolation-head-pat"  alt="consolation-head-pat"  src="https://media.tenor.com/hTFz1CU9ljcAAAAi/milk-and-mocha.gif"/>
+        <img   class="hand-hold-please"      alt="hand-hold-please"      src="https://media.tenor.com/w8yxWaatwLIAAAAi/milk-and-mocha.gif"/>
+        <img   class="flustered-punch"       alt="flustered-punch"       src="https://media.tenor.com/1CCNmtTzaSsAAAAi/milk-and-mocha.gif"/>
+        <img   class="satisfied-dance"       alt="satisfied-dance"       src="https://media.tenor.com/O-tKN4NYQOsAAAAi/milk-mocha-dance.gif"/>
+        <img   class="disgusted-confused"    alt="disgusted-confused"    src="https://media.tenor.com/KJ-ArgsmXwgAAAAi/milk-mocha-confused-milk-mocha-bear.gif"/>
+        <img   class="confident-please"      alt="confident-please"      src="https://media.tenor.com/Idr_-NLOu8oAAAAi/milk-and-mocha.gif"/>
+        <img   class="angry-look-away"       alt="angry-look-away"       src="https://media.tenor.com/qF1cFP9WVN8AAAAi/milk-and-mocha-mad.gif"/>
+        <audio class="wii-shopping"          alt="wii-shopping"          src="https://dl.vgmdownloads.com/soundtracks/wii-music-collection/mqwcxcbzcc/07.%20Shop%20Channel.mp3"></audio>
+        <audio class="wii-sports"            alt="wii-sports"            src="https://dl.vgmdownloads.com/soundtracks/wii-music-collection/ganfxgskdk/08.%20Title%20%28Wii%20Sports%29.mp3"></audio>
+        <audio class="yippee"                alt="yippee"                src="https://www.myinstants.com/media/sounds/yippee-meme-sound-effect.mp3"></audio>
+        <audio class="oof"                   alt="oof"                   src="https://www.myinstants.com/media/sounds/roblox-death-sound_1.mp3"></audio>
+        <audio class="hk-caterpillar"        alt="hk-caterpillar"        src="https://www.myinstants.com/media/sounds/caterpillar_hollow_knight.mp3"></audio>
+      </div>
+		</main>
+	</body>
 </html>
