@@ -7,327 +7,262 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>MineSweeper</title>
 		<style>
-			.height-limiter div {
-				overflow: hidden;
-				width: 0;
+			#mine-sweeper {
+				--n: 32;
+				--m: 32;
+				width: max-content;
+				display: flex;
+				flex-direction: column;
+				outline: 0.1em solid gray;
+				padding: 0.2em;
+				gap: 0.5em;
 			}
-			.width-limiter div {
-				overflow: hidden;
-				height: 0;
+			#mine-sweeper header {
+				display: flex;
+				align-items: end;
+				flex-direction: row;
+				justify-content: space-around;
+				max-width: 100vw;
 			}
-
-			.cell {
-				outline: 1px solid gray;
-				border-radius: 2px;
+			#mine-sweeper header .info {
+				display: grid;
+				grid-template: auto auto / auto auto;
+				text-align: right;
+			}
+			#mine-sweeper header .info * {
+				margin: 0;
+				padding: 0 0.1em;
+			}
+			#mine-sweeper .board {
+				display: grid;
+				grid-template-columns: repeat(var(--n), auto);
+				grid-template-rows: repeat(var(--m), 1fr);
+				gap: 0.1em;
+				width: min-content;
+			}
+			#mine-sweeper .board .cell {
+				display: block;
 				text-align: center;
+				outline: 0.1em solid gray;
+				border-radius: 0.2em;
+				width: 1.5em;
+				height: 1.5em;
+				line-height: 1.5em;
 				-webkit-user-select: none;
 				user-select: none;
 			}
-			.cell.flagged {
-				outline: 1px dotted red;
+			#mine-sweeper .board .cell.flagged {
+				outline: 0.1em dotted #8008;
 			}
-			.cell:hover {
-				background-color: #00000080;
+			#mine-sweeper .board .cell:focus,
+			#mine-sweeper .board .cell:hover {
+				background-color: #0008;
 			}
-			.cell.revealed {
-				background-color: #00000080;
+			#mine-sweeper .board .cell.dug {
+				background-color: #0008;
 				outline: none;
 			}
-			.cell.revealed.value0 {
-				color: transparent;
-			}
-			.cell.revealed.value1 {
-				color: blue;
-			}
-			.cell.revealed.value2 {
-				color: green;
-			}
-			.cell.revealed.value3 {
-				color: red;
-			}
-			.cell.revealed.value4 {
-				color: purple;
-			}
-			.cell.revealed.value5 {
-				color: yellow;
-			}
-			.cell.revealed.value6 {
-				color: orange;
-			}
-			.cell.revealed.value7 {
-				color: darkred;
-			}
-			.cell.revealed.value8 {
-				color: black;
-			}
-			.cell.revealed.value💣 {
-				background-color: var(--bomb-color);
-			}
-			.win {
-				--bomb-color: green;
-			}
-			.lose {
-				--bomb-color: red;
-			}
-
-			#MineSweeperGame {
-				outline: 1px solid gray;
-				width: min-content;
-			}
-
-			#MineSweeperGame > header {
-				display: flex;
-				flex-direction: row;
-				justify-content: space-around;
-				align-items: end;
-				max-width: 100vw;
-			}
-
-			#MineSweeperGame > header table {
-				text-align: right;
-			}
+		</style>
+		<!-- prettier-ignore -->
+		<style>
+			/* State Colors */
+			#mine-sweeper.win .board .cell { --bomb-color: green; }
+			#mine-sweeper.lose .board .cell { --bomb-color: red; }
+			#mine-sweeper .board .cell.dug.value0 { color: transparent; }
+			#mine-sweeper .board .cell.dug.value1 { color: blue; }
+			#mine-sweeper .board .cell.dug.value2 { color: green; }
+			#mine-sweeper .board .cell.dug.value3 { color: red; }
+			#mine-sweeper .board .cell.dug.value4 { color: purple; }
+			#mine-sweeper .board .cell.dug.value5 { color: yellow; }
+			#mine-sweeper .board .cell.dug.value6 { color: orange; }
+			#mine-sweeper .board .cell.dug.value7 { color: darkred; }
+			#mine-sweeper .board .cell.dug.value8 { color: black; }
+			#mine-sweeper .board .cell.dug.value💣 { background-color: var(--bomb-color); }
 		</style>
 		<script>
-			const mineSweeperGame = {
-				n: 16,
-				m: 16,
+			const mineSweeper = {
+				/**@typedef {{
+				 * i       : number,
+				 * j       : number,
+				 * value   : string,
+				 * div     : HTMLElement,
+				 * flagged : boolean,
+				 * mine    : boolean,
+				 * dug     : boolean,
+				 * }} cell
+				 */
+				n: 32,
+				m: 32,
+				/**@type {cell[]}*/
 				cells: [],
-
-				reset(n, m, bomb_count) {
-					this.n = n = n ?? this.n
-					this.m = m = m ?? this.m
-					bomb_count = bomb_count ?? Math.floor((0.1 + 0.1 * Math.random()) * n * m)
-
-					// create cells
-					const gameTds = this.buildDomElements(n, m)
-					this.cells = Array.from({ length: n }, (_, i) =>
-						Array.from({ length: m }, (_, j) => {
-							const cell = {
-								i,
-								j,
-								value: 0,
-								td: gameTds[i][j],
-								_isRevealed: false,
-								_isFlagged: false,
-
-								get isRevealed() {
-									return this._isRevealed
-								},
-								get isFlagged() {
-									return this._isFlagged
-								},
-								get isBomb() {
-									return this.value === '💣'
-								},
-
-								set isRevealed(value) {
-									this._isRevealed = value
-									this.td.textContent = value ? this.value : ''
-									this.td.classList.toggle('revealed', value)
-									this.td.classList.toggle(`value${this.value}`, value)
-								},
-								set isFlagged(value) {
-									this._isFlagged = value
-									this.td.textContent = value ? '🚩' : ''
-									this.td.classList.toggle('flagged', value)
-								},
-								set isBomb(value) {
-									this.value = value ? '💣' : this.isBomb ? 0 : this.value
-								},
-							}
-							cell.td.gameCell = cell
-							cell.td.textContent = ''
-							cell.td.className = 'cell'
-							return cell
-						})
-					).flat()
-
-					// place bombs
-					const bombs = new Set()
-					while (bombs.size < bomb_count) {
-						const i = Math.floor(Math.random() * this.cells.length)
-						bombs.add(this.cells[i])
-					}
-					bombs.forEach(c => (c.isBomb = true))
-
-					// calculate neighbor count
-					this.cells.filter(c => !c.isBomb).forEach(c => (c.value = this.getNeighbors(c).filter(c => c.isBomb).length))
-
-					this.gameDiv.classList.remove('win', 'lose')
-					this.updateInfo()
-					console.log('New game', this)
+				/**@param {number} i
+				 * @param {number} j
+				 */
+				cellAt(i, j) {
+					const { cells, n, m } = this
+					if (i < 0 || n <= i || j < 0 || m <= j) return
+					return cells[i + j * n]
 				},
-
-				testEnd(cell) {
-					if (this.cells.some(c => c.isBomb && c.isRevealed)) {
-						return this.end('lose', 'A Bomb was Revealed', cell)
-					}
-					if (this.cells.every(c => c.isBomb !== c.isRevealed)) {
-						return this.end('win', 'Every Non-Bomb Revealed', cell)
-					}
-					const bombs = this.cells.filter(c => c.isBomb)
-					const flags = this.cells.filter(c => c.isFlagged)
-					if (flags.length && flags.every(c => c.isBomb) && bombs.every(c => c.isFlagged)) {
-						return this.end('win', 'Every and Only Bombs are Flagged', cell)
-					}
+				/**@param {{i:number,j:number}}
+				 * @returns {cell[]}
+				 */
+				cellsAround({ i, j }) {
+					const offsets = Array.from({ length: 3 }, (_, offset) => -1 + offset)
+					return offsets
+						.flatMap(offsetI => offsets.map(offsetJ => this.cellAt(offsetI + i, offsetJ + j)))
+						.filter(cell => cell && cell !== this.cellAt(i, j))
 				},
-
-				end(state, message, cell) {
-					console.log({ state, message, cell })
-					this.gameDiv.classList.toggle(state, true)
-					this.cells.filter(c => !c.isRevealed).forEach(c => (c.isRevealed = true))
-				},
-
-				dig(cell, testEnd = true) {
-					if (cell.isFlagged) {
-						return
+				/**@param {number} [n]
+				 * @param {number} [m]
+				 * @param {number} [mineCount]
+				 */
+				reset(n, m, mineCount) {
+					this.n = n ??= this.n
+					this.m = m ??= this.m
+					mineCount ??= Math.floor(n * m * 0.2)
+					const { templateDomCell } = this
+					// Create Cells
+					/**@type {cell[]}*/
+					const cells = (this.cells = Array.from({ length: n * m }, (_, flatI) => ({
+						i: Math.floor(flatI % n),
+						j: Math.floor(flatI / n),
+						value: 0,
+						div: null,
+						get flagged() { return this._flagged }, // prettier-ignore
+						set flagged(flagged) {
+							this.div.classList.toggle('flagged', (this._flagged = flagged))
+							this.div.textContent = flagged ? '🚩' : templateDomCell.textContent
+						},
+						get mine() { return this.value === '💣' }, // prettier-ignore
+						set mine(mine) { this.value = mine ? '💣' : this.mine ? '' : this.value }, // prettier-ignore
+						get dug() { return this._dug }, // prettier-ignore
+						set dug(dug) {
+							this.div.classList.toggle('dug', (this._dug = dug))
+							this.div.classList.toggle(`value${this.value}`, dug)
+							this.div.textContent = this.value
+						},
+						_flagged: false,
+						_dug: false,
+					})))
+					// Place bombs
+					/**@type {Set<cell>}*/ const mines = new Set()
+					while (mines.size < mineCount) mines.add(cells[Math.floor(Math.random() * cells.length)])
+					for (const mine of mines) mine.mine = true
+					// Calculate cell values
+					for (const cell of cells) {
+						if (cell.mine) continue
+						cell.value = this.cellsAround(cell).filter(c => c.mine).length
 					}
-					const wasRevealed = cell.isRevealed
-					cell.isRevealed = true
-
-					// cell value is 0 propagates
-					if (cell.value == 0) {
-						this.getNeighbors(cell).forEach(c => {
-							if (c.isRevealed) {
-								return
-							}
-							this.dig(c, false)
-						})
-						return
-					}
-
-					// clicking a revealed number with enough flags propagates
-					if (wasRevealed) {
-						const neighbors = this.getNeighbors(cell)
-						if (cell.value != neighbors.filter(c => c.isFlagged).length) {
-							return
-						}
-						neighbors
-							.filter(c => !c.isFlagged)
-							.forEach(c => {
-								if (c.isRevealed) {
-									return
-								}
-								this.dig(c, false)
-							})
-					}
-
-					if (testEnd) {
-						this.testEnd(cell)
-						this.updateInfo()
-					}
-				},
-
-				flag(cell) {
-					if (cell.isRevealed) {
-						return
-					}
-					cell.isFlagged = !cell.isFlagged
-					this.testEnd(cell)
-					this.updateInfo()
-				},
-
-				// === Utilities ===
-
-				getCell(i, j) {
-					const { n, m, cells } = this
-					if (i < 0 || n <= i || j < 0 || m <= j) {
-						return
-					}
-					return cells[m * i + j]
-				},
-
-				getNeighbors(cell) {
-					const { i, j } = cell
-					const indices = [-1, 0, 1]
-					return indices
-						.map(iOffset => indices.map(jOffset => this.getCell(i + iOffset, j + jOffset)))
-						.flat()
-						.filter(c => c && c !== cell)
-				},
-
-				// === Dom ===
-
-				get gameDiv() {
-					return document.getElementById('MineSweeperGame')
-				},
-				buildDomElements(n, m) {
-					const game = this.gameDiv
-					const tbody = game.querySelector(':scope>table>tbody')
-
-					// create rows
-					const [topLimiter, ...reusableTrs] = tbody.querySelectorAll(':scope>tr')
-					const bottomLimiter = reusableTrs.pop()
-					const rowTemplate = reusableTrs[0]
-					const trs = [
-						topLimiter,
-						...Array.from({ length: n }, (_, i) => reusableTrs[i] ?? rowTemplate.cloneNode(true)),
-						bottomLimiter,
-					]
-					tbody.replaceChildren(...trs)
-
-					// create columns
-					const gameTds = trs.map(tr => {
-						const [leftLimiter, ...reusableTds] = tr.querySelectorAll(':scope>td')
-						const rightLimiter = reusableTds.pop()
-						const cellTemplate = reusableTds[0]
-						const tds = [
-							leftLimiter,
-							...Array.from({ length: m }, (_, i) => reusableTds[i] ?? cellTemplate.cloneNode(true)),
-							rightLimiter,
-						]
-						tr.replaceChildren(...tds)
-						return tds.slice(1, -1)
+					// Reset DOM
+					/**@type {HTMLElement}*/
+					const gameDom = document.getElementById('mine-sweeper')
+					gameDom.classList.remove('win', 'lose')
+					gameDom.style.setProperty('--n', n)
+					gameDom.style.setProperty('--m', m)
+					/**@type {HTMLElement}*/
+					const boardDom = gameDom.querySelector('.board')
+					/**@type {NodeListOf<HTMLElement>}*/
+					const reusableDomCells = boardDom.querySelectorAll('.cell')
+					const domCells = cells.map((cell, i) => {
+						const div = (cell.div = reusableDomCells[i] ?? templateDomCell.cloneNode())
+						div.textContent = templateDomCell.textContent
+						div.className = templateDomCell.className
+						div.gameCell = cell
+						return div
 					})
-
-					return gameTds.slice(1, -1)
+					boardDom.replaceChildren(...domCells)
+					this.displayInfo()
+					console.log('reset', { n, m, cells })
 				},
-
-				updateInfo() {
-					const [totalBombs, flaggedBombs] = this.gameDiv
-						.querySelector(':scope>header>table>tbody')
-						.querySelectorAll('td')
-					totalBombs.textContent = this.cells.filter(c => c.isBomb).length
-					flaggedBombs.textContent = this.cells.filter(c => c.isFlagged).length
+				/**@param {cell} cell*/
+				dig(cell, testEnd = true) {
+					if (cell.flagged) return
+					const wasDug = cell.dug
+					cell.dug = true
+					const around = this.cellsAround(cell)
+					if (wasDug) {
+						if (cell.value != around.filter(c => c.flagged).length) return
+						for (const cell of around) {
+							if (cell.dug) continue
+							this.dig(cell, false)
+						}
+					} else if (cell.value == 0) {
+						for (const cell of around) {
+							if (cell.dug) continue
+							this.dig(cell, false)
+						}
+					}
+					if (testEnd) {
+						this.displayInfo()
+						this.testEnd()
+					}
 				},
-
+				/**@param {cell} cell*/
+				flag(cell) {
+					if (cell.dug) return
+					cell.flagged = !cell.flagged
+					this.displayInfo()
+					this.testEnd()
+				},
+				testEnd() {
+					const { cells } = this
+					if (cells.some(c => c.mine && c.dug)) return this.end('lose', 'A mine is dug')
+					if (cells.every(c => c.mine !== c.dug)) return this.end('win', 'Every non-mine dug')
+					if (cells.every(c => c.flagged === c.mine)) return this.end('win', 'Every and only mines flagged')
+				},
+				/**@param {string} state
+				 * @param {string} message
+				 */
+				end(state, message) {
+					const { cells } = this
+					const gameDom = document.getElementById('mine-sweeper')
+					gameDom.classList.remove('win', 'lose')
+					gameDom.classList.toggle(state, true)
+					for (const cell of cells) {
+						if (cell.dug) continue
+						cell.dug = true
+					}
+					console.log('end', { state, message })
+				},
+				/**@type {HTMLElement}*/
+				templateDomCell: null,
 				cheatPeek() {
-					this.cells.forEach(c => (c.td.textContent = c.value))
+					for (const cell of this.cells) cell.div.textContent = cell.value
 				},
+				displayInfo() {
+					const { cells } = this
+					const [total, flagged] = document.querySelectorAll('#mine-sweeper header .info p')
+					total.textContent = cells.filter(c => c.mine).length
+					flagged.textContent = cells.filter(c => c.flagged).length
+				},
+			}
+		</script>
+		<script>
+			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
+			function onDOMContentLoaded() {
+				const templateDomCell = (mineSweeper.templateDomCell = document.querySelector('.cell'))
+				templateDomCell.parentElement.removeChild(templateDomCell)
+				mineSweeper.reset(16, 8, 8)
 			}
 		</script>
 	</head>
 	<body>
-		<div id="MineSweeperGame">
+		<div id="mine-sweeper">
 			<header>
-				<!-- prettier-ignore -->
-				<table><tbody>
-					<tr><th>  Total Mines:</th><td>#</td></tr>
-					<tr><th>Flagged Mines:</th><td>#</td></tr>
-				</tbody></table>
-				<button onclick="mineSweeperGame.reset()" type="button">Reset</button>
+				<div class="info">
+					<b>Total Mines:</b>
+					<p>#</p>
+					<b>Flagged Mines:</b>
+					<p>#</p>
+				</div>
+				<button type="button" onclick="mineSweeper.reset()">Reset</button>
 			</header>
-			<table oncontextmenu="event.preventDefault()">
-				<tbody>
-					<!-- prettier-ignore -->
-					<tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
-					<tr>
-						<td class="height-limiter"><div>🟫</div></td>
-						<td
-							class="cell"
-							onclick="      mineSweeperGame.dig (event.target.gameCell) ;event.preventDefault()"
-							oncontextmenu="mineSweeperGame.flag(event.target.gameCell) ;event.preventDefault()">
-							💣
-						</td>
-						<td class="height-limiter"><div>🟫</div></td>
-					</tr>
-					<!-- prettier-ignore -->
-					<tr class="width-limiter"><td></td><td><div>🟫</div></td><td></td></tr>
-				</tbody>
-			</table>
+			<div class="board">
+				<div
+					class="cell"
+					onclick="      mineSweeper.dig (event.target.gameCell) ;event.preventDefault()"
+					oncontextmenu="mineSweeper.flag(event.target.gameCell) ;event.preventDefault()"></div>
+			</div>
 		</div>
-		<script>
-			mineSweeperGame.reset(32, 32, 200)
-		</script>
 	</body>
 </html>
