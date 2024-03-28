@@ -26,7 +26,7 @@
 			}
 			#mine-sweeper header .info {
 				display: grid;
-				grid-template: auto auto / auto auto;
+				grid-template: repeat(2, 1fr) / repeat(2, auto);
 				text-align: right;
 			}
 			#mine-sweeper header .info * {
@@ -35,8 +35,7 @@
 			}
 			#mine-sweeper .board {
 				display: grid;
-				grid-template-columns: repeat(var(--n), auto);
-				grid-template-rows: repeat(var(--m), 1fr);
+				grid-template: repeat(var(--m), 1fr) / repeat(var(--n), auto);
 				gap: 0.1em;
 				width: min-content;
 			}
@@ -180,18 +179,8 @@
 					const wasDug = cell.dug
 					cell.dug = true
 					const around = this.cellsAround(cell)
-					if (wasDug) {
-						if (cell.value != around.filter(c => c.flagged).length) return
-						for (const cell of around) {
-							if (cell.dug) continue
-							this.dig(cell, false)
-						}
-					} else if (cell.value == 0) {
-						for (const cell of around) {
-							if (cell.dug) continue
-							this.dig(cell, false)
-						}
-					}
+					if (wasDug && cell.value != around.filter(c => c.flagged).length) return
+					if (wasDug || cell.value == 0) for (const cell of around) if (!cell.dug) this.dig(cell, false)
 					if (testEnd) {
 						this.displayInfo()
 						this.testEnd()
@@ -208,7 +197,7 @@
 					const { cells } = this
 					if (cells.some(c => c.mine && c.dug)) return this.end('lose', 'A mine is dug')
 					if (cells.every(c => c.mine !== c.dug)) return this.end('win', 'Every non-mine dug')
-					if (cells.every(c => c.flagged === c.mine)) return this.end('win', 'Every and only mines flagged')
+					if (cells.every(c => c.mine === c.flagged)) return this.end('win', 'Every and only mines are flagged')
 				},
 				/**@param {string} state
 				 * @param {string} message
@@ -226,14 +215,14 @@
 				},
 				/**@type {HTMLElement}*/
 				templateDomCell: null,
-				cheatPeek() {
-					for (const cell of this.cells) cell.div.textContent = cell.value
-				},
 				displayInfo() {
 					const { cells } = this
 					const [total, flagged] = document.querySelectorAll('#mine-sweeper header .info p')
 					total.textContent = cells.filter(c => c.mine).length
 					flagged.textContent = cells.filter(c => c.flagged).length
+				},
+				cheatPeek() {
+					for (const cell of this.cells) cell.div.textContent = cell.value
 				},
 			}
 		</script>
