@@ -38,6 +38,8 @@
 				grid-template: repeat(var(--m), 1fr) / repeat(var(--n), auto);
 				gap: 0.1em;
 				width: min-content;
+				padding: 0.5em;
+				padding-top: 1em;
 			}
 			#mine-sweeper .board .cell {
 				display: block;
@@ -246,7 +248,7 @@
 				</div>
 				<button type="button" onclick="mineSweeper.reset()">Reset</button>
 			</header>
-			<div class="board">
+			<div class="board" oncontextmenu="event.preventDefault()">
 				<div
 					class="cell"
 					onclick="      mineSweeper.dig (event.target.gameCell) ;event.preventDefault()"
