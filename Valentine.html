@@ -1,133 +1,167 @@
 <!-- @format -->
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Valentine</title>
-		<style>
-			body {
-				display: flex;
-				justify-content: space-around;
-				margin: 4vmin;
-			}
-			.question {
-				outline: 1vmin double pink;
-				padding: 2vmin;
-				border-radius: 8vmin;
-				font-size: 4vmin;
-				font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
-				text-align: center;
-			}
-			.question > * {
-				display: flex;
-				justify-content: space-around;
-			}
-			.answer {
-				display: none;
-				display: inline-flex;
-				padding: 2vmin;
-				border-radius: 10vmin;
-				border: 1px solid white;
-				font-size: inherit;
-				transition: all 0.1s ease-in-out;
-				justify-content: center;
-				margin: 2vmin;
-			}
-			.answer:hover {
-				outline: 1vmin dotted pink;
-			}
-			.yes {
-				background-color: pink;
-			}
-			.yes:hover {
-				background-image: radial-gradient(red, pink, white, pink, red);
-				transition: all 0.1s ease-in-out;
-			}
-			.no {
-				background-color: red;
-			}
-			.no:hover {
-				background-color: transparent;
-				background-image: linear-gradient(transparent, red, transparent);
-				margin-top: 10%;
-				transition: all 0.1s ease-out;
-			}
-			img {
-				height: 50vmin;
-			}
-			#hidden-resources {
-				display: none;
-			}
-		</style>
-		<script>
-			const valentineGame = {
-				noCount: -1,
-				yes() {
-					const { yes, no, icon, question, icons, music } = this.dom
-					question.textContent = '❤️ YAY ❤️'
-					const answer = yes.parentNode
-					answer.replaceChildren(`You said no ${this.noCount} times before saying yes XD`)
-					answer.style.padding = '0 2vmin'
-					this.noCount = 0
-					music.yippee.play()
-					let imageIndex = 0
-					const imgs = [
-						icons.flusteredPunch,
-						icons.satisfiedDance,
-						icons.loveHug,
-						icons.blowingKissesAttack,
-						icons.hugAttack,
-					]
-					const nextImage = async () => {
-						this.dom.icon.replaceChildren(
-							imgs[imageIndex++] ?? //
-								imgs[(imageIndex = 0)]
-						)
-						setTimeout(nextImage, 4000)
-					}
-					nextImage()
-					if (music.wiiSports.paused) {
-						music.wiiSports.currentTime = 0
-						music.wiiSports.volume = 0.5
-						music.wiiSports.loop = true
-						music.wiiSports.play()
-						music.wiiShopping.pause()
-					}
-				},
-				no() {
-					const { yes, no, icon, question, icons, music } = this.dom
-					question.textContent = '❤️ Will you be my Valentine? ❤️'
-					yes.style.padding = `2vmin ${2 + this.noCount}vmin 2vmin`
-					const imgProgression = [
-						icons.flusteredOnPhone,
-						icons.confidentPlease,
-						icons.flusteredTipToe,
-						icons.handHoldPlease,
-						icons.blowingKissesAttack,
-						icons.disgustedConfused,
-						icons.angryLookAway,
-						icons.consolationHeadPat,
-					]
-					const prevImg = icon.querySelector('img')
-					const newImg = imgProgression[this.noCount++ / 3] ?? prevImg
-					if (prevImg != newImg) {
-						icon.replaceChildren(newImg)
-						;(newImg === imgProgression.at(-1) //
-							? music.hkCaterpillar
-							: music.oof
-						).play()
-					}
-					if (music.wiiShopping.paused) {
-						music.wiiShopping.currentTime = 0
-						music.wiiShopping.volume = 0.2
-						music.wiiShopping.loop = true
-						music.wiiShopping.play()
-						music.wiiSports.pause()
-					}
-				},
-				// prettier-ignore
-				dom: {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Valentine</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: space-around;
+        margin: 4vmin;
+      }
+      .question {
+        outline: 1vmin double pink;
+        padding: 2vmin;
+        border-radius: 8vmin;
+        font-size: 4vmin;
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        text-align: center;
+      }
+      .question > * {
+        display: flex;
+        justify-content: space-around;
+      }
+      .answer {
+        display: none;
+        display: inline-flex;
+        padding: 2vmin;
+        border-radius: 10vmin;
+        border: 1px solid white;
+        font-size: inherit;
+        transition: all 0.1s ease-in-out;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+        margin: 2vmin;
+      }
+      .answer:hover {
+        outline: 1vmin dotted pink;
+      }
+      .yes {
+        background-color: pink;
+      }
+      .yes:hover {
+        background-image: radial-gradient(red, pink, white, pink, red);
+        transition: all 0.1s ease-in-out;
+      }
+      .no {
+        background-color: red;
+        transition: all 1s ease-in-out;
+      }
+      .no:hover {
+        background-color: transparent;
+        background-image: linear-gradient(transparent, red, transparent);
+      }
+      .no:hover[data-count='0'] {
+        margin-top: 100%;
+      }
+      img {
+        height: 50vmin;
+      }
+      #hidden-resources {
+        display: none;
+      }
+    </style>
+    <script>
+      const valentineGame = {
+        yes() {
+          const { yes, no, icon, question, icons, music } = this.dom
+          question.textContent = '❤️ YAY ❤️'
+          const answer = yes.parentNode
+          answer.replaceChildren(
+            `You said no ${no.dataset.count} times before saying yes XD`
+          )
+          answer.style.padding = '0 2vmin'
+          no.dataset.count = 0
+          music.yippee.play()
+          let imageIndex = 0
+          const imgs = [
+            icons.flusteredPunch,
+            icons.satisfiedDance,
+            icons.loveHug,
+            icons.blowingKissesAttack,
+            icons.hugAttack,
+          ]
+          const nextImage = async () => {
+            this.dom.icon.replaceChildren(
+              imgs[imageIndex++] ?? //
+                imgs[(imageIndex = 0)]
+            )
+            setTimeout(nextImage, 4000)
+          }
+          nextImage()
+          if (music.wiiSports.paused) {
+            music.wiiSports.currentTime = 0
+            music.wiiSports.volume = 0.5
+            music.wiiSports.loop = true
+            music.wiiSports.play()
+            music.wiiShopping.pause()
+          }
+        },
+        no() {
+          const { yes, no, icon, question, icons, music } = this.dom
+          question.textContent = '❤️ Will you be my Valentine? ❤️'
+          yes.style.padding = `2vmin ${2 + parseInt(no.dataset.count)}vmin 2vmin`
+          const imgProgression = [
+            icons.flusteredOnPhone,
+            icons.confidentPlease,
+            icons.flusteredTipToe,
+            icons.handHoldPlease,
+            icons.blowingKissesAttack,
+            icons.disgustedConfused,
+            icons.angryLookAway,
+            icons.consolationHeadPat,
+          ]
+          const prevImg = icon.querySelector('img')
+          const newImg = imgProgression[no.dataset.count++ / 3] ?? prevImg
+          if (prevImg != newImg) {
+            icon.replaceChildren(newImg)
+            ;(newImg === imgProgression.at(-1) //
+              ? music.hkCaterpillar
+              : music.oof
+            ).play()
+          }
+          if (music.wiiShopping.paused) {
+            music.wiiSports.pause()
+            music.wiiShopping.currentTime = 0
+            music.wiiShopping.volume = 0.2
+            music.wiiShopping.loop = true
+            music.wiiShopping.play().catch(reason => {
+              if (no.dataset.count > 0) return
+              const overlay = document.createElement('div')
+              overlay.style.position = 'fixed'
+              overlay.style.top = 0
+              overlay.style.left = 0
+              overlay.style.width = '100%'
+              overlay.style.height = '100%'
+              overlay.style.backgroundColor = '#000D'
+              overlay.style.display = 'flex'
+              overlay.style.alignItems = 'center'
+              overlay.style.justifyContent = 'center'
+              overlay.style.zIndex = 1000
+              const button = document.createElement('button')
+              button.textContent = 'Click to Start'
+              button.style.padding = '1em 2em'
+              button.style.fontSize = '2em'
+              button.style.border = 'none'
+              button.style.borderRadius = '0.5em'
+              button.style.backgroundColor = 'pink'
+              button.style.cursor = 'pointer'
+              button.addEventListener('click', () =>
+                music.wiiShopping
+                  .play()
+                  .then(() => overlay.remove())
+                  .catch(console.error)
+              )
+              overlay.appendChild(button)
+              document.body.appendChild(overlay)
+            })
+          }
+        },
+        // prettier-ignore
+        dom: {
           get icon     () { return this.querySelector('.icon') },
           get yes      () { return this.querySelector('.yes ') },
           get no       () { return this.querySelector('.no  ') },
@@ -160,26 +194,38 @@
             querySelector(name) { return document.querySelector(`#hidden-resources audio.${name.trim()}`) },
           },
         },
-			}
-			document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
-			function onDOMContentLoaded() {
-				valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
-				valentineGame.dom.yes.addEventListener('click', event => valentineGame.yes())
-				valentineGame.dom.no.addEventListener('click', event => valentineGame.no())
-				valentineGame.dom.no.click()
-			}
-		</script>
-	</head>
-	<body>
-		<main class="question">
-			<h1>❤️ Will you be my Valentine? ❤️</h1>
-			<div class="icon"></div>
-			<span>
-				<button type="button" class="answer yes">💞 Yes 💘</button>
-				<button type="button" class="answer no">💔 No ❤️‍🩹</button>
-			</span>
-			<!-- prettier-ignore -->
-			<div id="hidden-resources">
+      }
+    </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', onDOMContentLoaded, {
+        once: true,
+      })
+      function onDOMContentLoaded() {
+        valentineGame.dom.icon.replaceChildren(
+          valentineGame.dom.icons.confidentPlease
+        )
+        valentineGame.dom.yes.addEventListener('click', event =>
+          valentineGame.yes()
+        )
+        valentineGame.dom.no.addEventListener('click', event =>
+          valentineGame.no()
+        )
+        valentineGame.dom.no.click()
+      }
+    </script>
+  </head>
+  <body>
+    <main class="question">
+      <h1>❤️ Will you be my Valentine? ❤️</h1>
+      <div class="icon"></div>
+      <span>
+        <button type="button" class="answer yes">💞 Yes 💘</button>
+        <button type="button" class="answer no" data-count="-1">
+          💔 No ❤️‍🩹
+        </button>
+      </span>
+      <!-- prettier-ignore -->
+      <div id="hidden-resources">
         <img   class="flustered-on-phone"    alt="flustered-on-phone"    src="https://media.tenor.com/PVJev3UoMzMAAAAi/uwu.gif"/>
         <img   class="flustered-tip-toe"     alt="flustered-tip-toe"     src="https://media.tenor.com/hpgCwxnBaK8AAAAi/milk-and-mocha.gif"/>
         <img   class="love-hug"              alt="love-hug"              src="https://media.tenor.com/kgZnQRqOZqkAAAAi/milk-and-mocha.gif"/>
@@ -192,12 +238,12 @@
         <img   class="disgusted-confused"    alt="disgusted-confused"    src="https://media.tenor.com/KJ-ArgsmXwgAAAAi/milk-mocha-confused-milk-mocha-bear.gif"/>
         <img   class="confident-please"      alt="confident-please"      src="https://media.tenor.com/Idr_-NLOu8oAAAAi/milk-and-mocha.gif"/>
         <img   class="angry-look-away"       alt="angry-look-away"       src="https://media.tenor.com/qF1cFP9WVN8AAAAi/milk-and-mocha-mad.gif"/>
-        <audio class="wii-shopping"          alt="wii-shopping"          src="https://dl.vgmdownloads.com/soundtracks/wii-music-collection/mqwcxcbzcc/07.%20Shop%20Channel.mp3"></audio>
-        <audio class="wii-sports"            alt="wii-sports"            src="https://dl.vgmdownloads.com/soundtracks/wii-music-collection/ganfxgskdk/08.%20Title%20%28Wii%20Sports%29.mp3"></audio>
-        <audio class="yippee"                alt="yippee"                src="https://www.myinstants.com/media/sounds/yippee-meme-sound-effect.mp3"></audio>
-        <audio class="oof"                   alt="oof"                   src="https://www.myinstants.com/media/sounds/roblox-death-sound_1.mp3"></audio>
-        <audio class="hk-caterpillar"        alt="hk-caterpillar"        src="https://www.myinstants.com/media/sounds/caterpillar_hollow_knight.mp3"></audio>
+        <audio class="wii-shopping"          alt="wii-shopping"          src="https://kappa.vgmsite.com/soundtracks/wii-music-collection/mqwcxcbzcc/07.%20Shop%20Channel.mp3" preload="auto"></audio>
+        <audio class="wii-sports"            alt="wii-sports"            src="https://kappa.vgmsite.com/soundtracks/wii-music-collection/ganfxgskdk/08.%20Title%20%28Wii%20Sports%29.mp3" preload="auto"></audio>
+        <audio class="yippee"                alt="yippee"                src="https://www.myinstants.com/media/sounds/yippee-meme-sound-effect.mp3" preload="auto"></audio>
+        <audio class="oof"                   alt="oof"                   src="https://www.myinstants.com/media/sounds/roblox-death-sound_1.mp3" preload="auto"></audio>
+        <audio class="hk-caterpillar"        alt="hk-caterpillar"        src="https://www.myinstants.com/media/sounds/caterpillar_hollow_knight.mp3" preload="auto"></audio>
       </div>
-		</main>
-	</body>
+    </main>
+  </body>
 </html>
