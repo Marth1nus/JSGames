@@ -70,9 +70,7 @@
           const { yes, no, icon, question, icons, music } = this.dom
           question.textContent = '❤️ YAY ❤️'
           const answer = yes.parentNode
-          answer.replaceChildren(
-            `You said no ${no.dataset.count} times before saying yes XD`
-          )
+          answer.replaceChildren(`You said no ${no.dataset.count} times before saying yes XD`)
           answer.style.padding = '0 2vmin'
           no.dataset.count = 0
           music.yippee.play()
@@ -201,15 +199,9 @@
         once: true,
       })
       function onDOMContentLoaded() {
-        valentineGame.dom.icon.replaceChildren(
-          valentineGame.dom.icons.confidentPlease
-        )
-        valentineGame.dom.yes.addEventListener('click', event =>
-          valentineGame.yes()
-        )
-        valentineGame.dom.no.addEventListener('click', event =>
-          valentineGame.no()
-        )
+        valentineGame.dom.icon.replaceChildren(valentineGame.dom.icons.confidentPlease)
+        valentineGame.dom.yes.addEventListener('click', event => valentineGame.yes())
+        valentineGame.dom.no.addEventListener('click', event => valentineGame.no())
         valentineGame.dom.no.click()
       }
     </script>
@@ -220,9 +212,7 @@
       <div class="icon"></div>
       <span>
         <button type="button" class="answer yes">💞 Yes 💘</button>
-        <button type="button" class="answer no" data-count="-1">
-          💔 No ❤️‍🩹
-        </button>
+        <button type="button" class="answer no" data-count="-1">💔 No ❤️‍🩹</button>
       </span>
       <!-- prettier-ignore -->
       <div id="hidden-resources">

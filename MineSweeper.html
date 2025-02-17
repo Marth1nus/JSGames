@@ -110,9 +110,7 @@
         cellsAround({ i, j }) {
           const offsets = Array.from({ length: 3 }, (_, offset) => -1 + offset)
           return offsets
-            .flatMap(offsetI =>
-              offsets.map(offsetJ => this.cellAt(offsetI + i, offsetJ + j))
-            )
+            .flatMap(offsetI => offsets.map(offsetJ => this.cellAt(offsetI + i, offsetJ + j)))
             .filter(cell => cell && cell !== this.cellAt(i, j))
         },
         /**@param {number} [n]
@@ -126,36 +124,30 @@
           const { templateDomCell } = this
           // Create Cells
           /**@type {cell[]}*/
-          const cells = (this.cells = Array.from(
-            { length: n * m },
-            (_, flatI) => ({
-              i: Math.floor(flatI % n),
-              j: Math.floor(flatI / n),
-              value: 0,
-              div: null,
-              get flagged() { return this._flagged }, // prettier-ignore
-              set flagged(flagged) {
-                this.div.classList.toggle('flagged', (this._flagged = flagged))
-                this.div.textContent = flagged
-                  ? '🚩'
-                  : templateDomCell.textContent
-              },
-              get mine() { return this.value === '💣' }, // prettier-ignore
-              set mine(mine) { this.value = mine ? '💣' : this.mine ? '' : this.value }, // prettier-ignore
-              get dug() { return this._dug }, // prettier-ignore
-              set dug(dug) {
-                this.div.classList.toggle('dug', (this._dug = dug))
-                this.div.classList.toggle(`value${this.value}`, dug)
-                this.div.textContent = this.value
-              },
-              _flagged: false,
-              _dug: false,
-            })
-          ))
+          const cells = (this.cells = Array.from({ length: n * m }, (_, flatI) => ({
+            i: Math.floor(flatI % n),
+            j: Math.floor(flatI / n),
+            value: 0,
+            div: null,
+            get flagged() { return this._flagged }, // prettier-ignore
+            set flagged(flagged) {
+              this.div.classList.toggle('flagged', (this._flagged = flagged))
+              this.div.textContent = flagged ? '🚩' : templateDomCell.textContent
+            },
+            get mine() { return this.value === '💣' }, // prettier-ignore
+            set mine(mine) { this.value = mine ? '💣' : this.mine ? '' : this.value }, // prettier-ignore
+            get dug() { return this._dug }, // prettier-ignore
+            set dug(dug) {
+              this.div.classList.toggle('dug', (this._dug = dug))
+              this.div.classList.toggle(`value${this.value}`, dug)
+              this.div.textContent = this.value
+            },
+            _flagged: false,
+            _dug: false,
+          })))
           // Place bombs
           /**@type {Set<cell>}*/ const mines = new Set()
-          while (mines.size < mineCount)
-            mines.add(cells[Math.floor(Math.random() * cells.length)])
+          while (mines.size < mineCount) mines.add(cells[Math.floor(Math.random() * cells.length)])
           for (const mine of mines) mine.mine = true
           // Calculate cell values
           for (const cell of cells) {
@@ -173,8 +165,7 @@
           /**@type {NodeListOf<HTMLElement>}*/
           const reusableDomCells = boardDom.querySelectorAll('.cell')
           const domCells = cells.map((cell, i) => {
-            const div = (cell.div =
-              reusableDomCells[i] ?? templateDomCell.cloneNode())
+            const div = (cell.div = reusableDomCells[i] ?? templateDomCell.cloneNode())
             div.textContent = templateDomCell.textContent
             div.className = templateDomCell.className
             div.gameCell = cell
@@ -190,10 +181,8 @@
           const wasDug = cell.dug
           cell.dug = true
           const around = this.cellsAround(cell)
-          if (wasDug && cell.value != around.filter(c => c.flagged).length)
-            return
-          if (wasDug || cell.value == 0)
-            for (const cell of around) if (!cell.dug) this.dig(cell, false)
+          if (wasDug && cell.value != around.filter(c => c.flagged).length) return
+          if (wasDug || cell.value == 0) for (const cell of around) if (!cell.dug) this.dig(cell, false)
           if (testEnd) {
             this.displayInfo()
             this.testEnd()
@@ -208,12 +197,9 @@
         },
         testEnd() {
           const { cells } = this
-          if (cells.some(c => c.mine && c.dug))
-            return this.end('lose', 'A mine is dug')
-          if (cells.every(c => c.mine !== c.dug))
-            return this.end('win', 'Every non-mine dug')
-          if (cells.every(c => c.mine === c.flagged))
-            return this.end('win', 'Every and only mines are flagged')
+          if (cells.some(c => c.mine && c.dug)) return this.end('lose', 'A mine is dug')
+          if (cells.every(c => c.mine !== c.dug)) return this.end('win', 'Every non-mine dug')
+          if (cells.every(c => c.mine === c.flagged)) return this.end('win', 'Every and only mines are flagged')
         },
         /**@param {string} state
          * @param {string} message
@@ -235,9 +221,7 @@
         templateDomCell: null,
         displayInfo() {
           const { cells } = this
-          const [total, flagged] = document.querySelectorAll(
-            '#mine-sweeper header .info p'
-          )
+          const [total, flagged] = document.querySelectorAll('#mine-sweeper header .info p')
           total.textContent = cells.filter(c => c.mine).length
           flagged.textContent = cells.filter(c => c.flagged).length
         },
@@ -251,8 +235,7 @@
         once: true,
       })
       function onDOMContentLoaded() {
-        const templateDomCell = (mineSweeper.templateDomCell =
-          document.querySelector('.cell'))
+        const templateDomCell = (mineSweeper.templateDomCell = document.querySelector('.cell'))
         templateDomCell.parentElement.removeChild(templateDomCell)
         mineSweeper.reset()
       }
@@ -273,7 +256,8 @@
         <div
           class="cell"
           onclick="      mineSweeper.dig (event.target.gameCell) ;event.preventDefault()"
-          oncontextmenu="mineSweeper.flag(event.target.gameCell) ;event.preventDefault()"></div>
+          oncontextmenu="mineSweeper.flag(event.target.gameCell) ;event.preventDefault()"
+        ></div>
       </div>
     </div>
   </body>
