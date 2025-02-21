@@ -41,6 +41,8 @@
       }
       #solitaire .pile {
         padding: 0;
+        min-width: var(--card-width);
+        min-height: var(--card-height);
         &::before {
           content: attr(title);
           text-align: center;
@@ -72,7 +74,7 @@
           }
         }
         &:nth-last-of-type(-n + 7) {
-          min-height: calc(var(--card-height) * 10);
+          min-height: calc(var(--card-height) * 5);
         }
       }
       #solitaire .card {
