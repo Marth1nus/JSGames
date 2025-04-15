@@ -201,7 +201,7 @@
         /** Game State
          *  ==========
          */
-        /** @type {board} */ board: {},
+        /** @type {board } */ board: {},
         /** @type {move[]} */ moves: [],
         /** @type {number} */ moveIndex: 0,
         /** @type {number} */ peekLength: 3,
@@ -308,9 +308,11 @@
           let { from, to, card } = move
           /**/ if (!from && !card) return { error: 'requires from pile name or card' }
           else if (!from && card) {
-            from = this.findCard(card)
-            if (!from) return { error: `"${card}" is not in any pile` }
-          } else if (from && !card) {
+            const { pile, i } = this.findCard(card) ?? {}
+            if (!pile) return { error: `"${card}" is not in any pile` }
+            from = pile
+          } //
+          else if (from && !card) {
             const { ranks, suits, board, peekLength } = this
             /**/ if (suits.includes(from)) {
               card = board[from][board[from].length - 1]
@@ -337,7 +339,7 @@
             if (from === to) continue
             moves.splice(moveIndex, moves.length, { from, to, card })
             res = this.redo()
-            if (res.error === undefined) return res
+            if (!('error' in res)) return res
             attemptsErrors.push(res.error)
           }
           console.table(attemptsErrors)
@@ -423,12 +425,12 @@
          */
         findCard(card) {
           const { board } = this
-          for (const pile in board) {
+          for (const key in board) {
+            /** @type {pile} */ const pile = key
             const i = board[pile].indexOf(card)
             if (typeof i !== 'number') throw new Error(`${i} is not a number`)
             if (i !== -1) return { pile, i }
           }
-          return {}
         },
         /**
          *
@@ -458,6 +460,7 @@
       const solitaireDOM = {
         /** @type {{[key in card]: HTMLDivElement}} */ cardDivs: {},
         /** @type {Map<HTMLDivElement, card>}       */ divCards: new Map(),
+        /** @type {number|undefined}                */ autoMoveTimeout: undefined,
         reset() {
           const { cardDivs, divCards } = this
           for (const [rank, suit, hidden] of solitaire.allCards) {
@@ -497,7 +500,35 @@
           const from = solitaire.pile(pileDiv.title)
           if (!card || !from) return
           console.info('click', cardDiv, { from, card })
-          solitaire.move({ from, card })
+          const move = solitaire.move({ from, card })
+          if ('error' in move) {
+            console.error(move.error)
+            return
+          }
+          this.autoClickFoundation()
+        },
+        /**
+         *
+         */
+        autoClickFoundation() {
+          for (const suit of solitaire.suits) {
+            const pile = solitaire.pile(suit)
+            if (!pile) continue
+            const cards = solitaire.board[pile]
+            const nextCard = solitaire.card(`${solitaire.ranks[cards.length]}${suit}`)
+            if (!nextCard) continue
+            const cardDiv = this.cardDivs[nextCard]
+            if (cardDiv.title !== nextCard) continue
+            const pileDiv = cardDiv.parentElement
+            if (![...'1234567', 'peek'].includes(pileDiv?.title)) continue
+            const pileDivCards = [...pileDiv.querySelectorAll('.card')]
+            if (pileDivCards.indexOf(cardDiv) !== pileDivCards.length - 1) continue
+            const latestMove = solitaire.moves[solitaire.moves.length - 1]
+            if (latestMove?.card0 === nextCard && latestMove.to !== 'peek') continue
+            clearTimeout(this.autoMoveTimeout)
+            this.autoMoveTimeout = setTimeout(() => cardDiv.click(), 200)
+            return cardDiv
+          }
         },
         /**
          * @param {boardUpdateEvent} update
@@ -551,6 +582,15 @@
               },
               { once: true }
             )
+          }
+        },
+        /**
+         *
+         */
+        cheatPeek() {
+          for (const card in this.cardDivs) {
+            const hidden = this.cardDivs[card].title != card
+            this.cardDivs[card].title = `${card}${hidden ? '*' : ''}`
           }
         },
       }
