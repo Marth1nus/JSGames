@@ -35,6 +35,10 @@
             color: blue;
           }
         }
+        & label {
+          text-align: right;
+          grid-column: span 7;
+        }
         & #info {
           grid-column: span 4;
         }
@@ -154,6 +158,30 @@
       #solitaire .moving {
         animation: move 0.2s ease-in-out forwards;
         z-index: 999;
+      }
+      label:has(input.switch[type='checkbox']) {
+        & > input[type='checkbox'] {
+          display: none;
+        }
+        cursor: pointer;
+        &::after {
+          content: '◎';
+          padding: 0em 0.5em 0em 0em;
+          opacity: 0.5;
+          font-size: 1.2em;
+          font-family: monospace;
+          display: inline-block;
+          line-height: 80%;
+          border-radius: 1em;
+          background: linear-gradient(transparent 10%, currentColor 150%);
+          transition: opacity 0.4s, padding 0.2s;
+          margin-right: 0.3em;
+        }
+        &:has(input.switch[type='checkbox']:checked)::after {
+          content: '◉';
+          padding: 0em 0em 0em 0.5em;
+          opacity: 1;
+        }
       }
     </style>
     <script>
@@ -505,7 +533,9 @@
             console.error(move.error)
             return
           }
-          this.autoClickFoundation()
+          const checkboxEnableAutoClick = document.getElementById('enableAutoClick')
+          if (checkboxEnableAutoClick instanceof HTMLInputElement && checkboxEnableAutoClick.checked)
+            this.autoClickFoundation()
         },
         /**
          *
@@ -599,6 +629,7 @@
   </head>
   <body>
     <div id="solitaire">
+      <label>Auto-Click <input type="checkbox" class="switch" id="enableAutoClick" checked /></label>
       <div id="info"></div>
       <button type="button" onclick="solitaire.reset()">Reset</button>
       <button type="button" onclick="solitaire.undo()">Undo</button>
