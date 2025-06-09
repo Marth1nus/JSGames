@@ -94,6 +94,7 @@
          */
         n: 32,
         m: 32,
+        firstMove: true,
         /**@type {cell[]}*/
         cells: [],
         /**@param {number} i
@@ -135,7 +136,7 @@
               this.div.textContent = flagged ? '🚩' : templateDomCell.textContent
             },
             get mine() { return this.value === '💣' }, // prettier-ignore
-            set mine(mine) { this.value = mine ? '💣' : this.mine ? '' : this.value }, // prettier-ignore
+            set mine(mine) { this.value = mine ? '💣' : this.mine ? 0 : this.value }, // prettier-ignore
             get dug() { return this._dug }, // prettier-ignore
             set dug(dug) {
               this.div.classList.toggle('dug', (this._dug = dug))
@@ -154,6 +155,7 @@
             if (cell.mine) continue
             cell.value = this.cellsAround(cell).filter(c => c.mine).length
           }
+          this.firstMove = true
           // Reset DOM
           /**@type {HTMLElement}*/
           const gameDom = document.getElementById('mine-sweeper')
@@ -177,6 +179,17 @@
         },
         /**@param {cell} cell*/
         dig(cell, testEnd = true) {
+          if (this.firstMove && cell.mine) {
+            const oldMine = cell
+            const nonMines = this.cells.filter(c => !c.mine)
+            const newMine = nonMines[Math.floor(Math.random() * nonMines.length)]
+            ;[oldMine.mine, newMine.mine] = [newMine.mine, oldMine.mine]
+            for (const cell of [oldMine, ...this.cellsAround(oldMine), ...this.cellsAround(newMine)])
+              if (!cell.mine) cell.value = this.cellsAround(cell).filter(c => c.mine).length
+            console.log('first move hit a mine! Swapping mine with non-mine:')
+            console.table([oldMine, newMine], ['i', 'j', 'value', 'div'])
+          }
+          this.firstMove = false
           if (cell.flagged) return
           const wasDug = cell.dug
           cell.dug = true
