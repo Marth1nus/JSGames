@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wordle</title>
+    <style>
+      #wordle {
+        & /* Variables */ {
+          --words-count: 6;
+          --word-length: 5;
+          --letter-width: 1em;
+          --pallet-0: #185;
+          --pallet-1: #eee;
+          --pallet-used: yellow;
+          --pallet-correct: cyan;
+        }
+        & /* #wordle */ {
+          color: var(--pallet-0);
+        }
+        & > .border {
+          border: 0.5em inset color-mix(in srgb, currentColor 40%, transparent);
+          background-color: color-mix(in srgb, currentColor 20%, transparent);
+          border-radius: 1em;
+          padding: 1em;
+          display: grid;
+          grid-template-columns: 1f1;
+          gap: 0.2em;
+        }
+        & button {
+          background-color: var(--pallet-1);
+          border: 0.2em outset color-mix(in srgb, currentColor 60%, transparent);
+          border-radius: 0.5em;
+          color: inherit;
+          &:focus,
+          &:hover {
+            background-color: color-mix(in srgb, var(--pallet-1) 80%, transparent);
+          }
+          &:active {
+            background-color: color-mix(in srgb, var(--pallet-1) 60%, transparent);
+            border-radius: 0.6em;
+            border-style: inset;
+          }
+        }
+        & header {
+          text-align: center;
+          background-color: color-mix(in srgb, var(--pallet-1) 99%, transparent);
+          border-radius: 1em;
+          font-size: large;
+          padding: 0.2em;
+        }
+        & .notify {
+          text-align: center;
+          transition: opacity 1s ease;
+        }
+        & ol.letters {
+          display: grid;
+          grid-template:
+            repeat(var(--words-count), 1fr) /
+            repeat(var(--word-length), auto);
+          justify-content: center;
+          gap: 0.5em 0.1em;
+          list-style: none;
+          padding: 0;
+        }
+        & li.letter {
+          font-size: x-large;
+          text-align: center;
+          background-color: color-mix(in srgb, var(--pallet-1) 99%, black);
+          width: var(--letter-width);
+          height: var(--letter-width);
+          padding: 0.3em;
+          border: 0.1em outset color-mix(in srgb, currentColor 60%, transparent);
+          border-radius: 0.3em;
+          &.submitted {
+            background-color: color-mix(in srgb, var(--pallet-1) 80%, black);
+          }
+          &.used {
+            background-color: var(--pallet-used);
+          }
+          &.used.correct {
+            background-color: var(--pallet-correct);
+          }
+        }
+        & footer {
+          display: grid;
+          grid-template: 1fr 5fr 0.66fr 0.5fr / repeat(5, 1fr);
+          text-align: center;
+          & > button:nth-of-type(1) {
+            grid-area: 1 / 2 / span 1 / span 1;
+          }
+          & > button:nth-of-type(2) {
+            grid-area: 1 / 4 / span 1 / span 1;
+          }
+          & > button:nth-of-type(3) {
+            grid-area: 3 / 3 / span 1 / span 1;
+          }
+          & .keyboard {
+            grid-column: 1 / span 5;
+            padding: 1em;
+            & > .key {
+              width: 3em;
+              height: 3em;
+              margin: 0.1em;
+              background-color: color-mix(in srgb, var(--pallet-1) 99%, black);
+              &.used {
+                background-color: color-mix(in srgb, var(--pallet-1) 60%, black);
+              }
+            }
+          }
+        }
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-width: 100vw;
+        min-height: 100vh;
+      }
+    </style>
+    <script type="module">
+      // One Time Definitions
+      const DOMContentLoaded = new Promise(resolve =>
+        document.readyState !== 'loading'
+          ? resolve()
+          : document.addEventListener('DOMContentLoaded', resolve, { once: true }),
+      )
+      const wordLength = 5
+      const wordsCount = 6
+      const firstTimePopulateDOM = async () => {
+        await DOMContentLoaded
+        document.querySelector('#wordle .letters').replaceChildren(
+          ...Array.from({ length: wordsCount }).flatMap((c, i) => {
+            const li = document.createElement('li')
+            li.className = 'letter'
+            li.innerText = 'WORDLE'[i] || ''
+            return Array.from({ length: wordLength }, () => li.cloneNode(true))
+          }),
+        )
+        document.querySelector('#wordle .keyboard').replaceChildren(
+          ...Array.from('qwertyuiop\nasdfghjkl\nzxcvbnm←\n'.toUpperCase(), c => {
+            if (c == '\n') return document.createElement('br')
+            const btn = document.createElement('button')
+            btn.className = 'key'
+            btn.innerText = c
+            btn.addEventListener('click', generalButtonOnClick)
+            return btn
+          }),
+        )
+        document.querySelectorAll('#wordle footer>button').forEach(btn => {
+          btn.addEventListener('click', generalButtonOnClick)
+        })
+        document.addEventListener('keydown', documentOnKey)
+      }
+      /** @param {Url} url */
+      const fetchWords = async url => {
+        const response = await fetch(url)
+        const text = await response.text()
+        const lines = text.split(/\r?\n/)
+        const [headerRow, ...rows] = lines.map(line => line.split(/,/).map(word => word.trim()))
+        const wordHeaderIndex = headerRow.indexOf('word')
+        const words = rows.map(row => row[wordHeaderIndex]).filter(Boolean)
+        return words
+      }
+      const [guesses, solutions, ..._] = await Promise.all([
+        fetchWords('data/wordle/guesses.csv'),
+        fetchWords('data/wordle/solutions.csv'),
+        firstTimePopulateDOM(),
+        DOMContentLoaded,
+      ])
+      const guessesSet = new Set(guesses)
+      const getRandomSolution = () => {
+        const solution = solutions[Math.floor(Math.random() * solutions.length)]
+        if (!guessesSet.has(solution)) {
+          guesses.push(solution)
+          guessesSet.add(solution)
+        }
+        return solution
+      }
+
+      // Game State
+      const letters = [...document.querySelectorAll('#wordle .letters .letter')] //
+        .filter(li => li instanceof HTMLLIElement)
+      const keyboard = [...document.querySelectorAll('#wordle .keyboard .key')] //
+        .filter(button => button instanceof HTMLButtonElement)
+      const solution = getRandomSolution()
+      let [i, j] = [0, 0]
+
+      // Game Behavior
+      letters.forEach(letter => (letter.textContent = ''))
+      let notifyTimeout
+      const notify = message => {
+        const notify = document.querySelector('#wordle .notify')
+        if (!(notify instanceof HTMLElement)) {
+          alert(message)
+          alert('If you are seeing this the notification div is broken')
+          throw new Error('Missing Notify div')
+        }
+        notify.textContent = message
+        notify.style.opacity = 1
+        clearTimeout(notifyTimeout)
+        notifyTimeout = setTimeout(() => (notify.style.opacity = 0.1), 3000)
+      }
+      notify('Guess The Word')
+      const commandSubmitHandler = () => {
+        if (j < wordLength) return notify(`Word is not complete`)
+        if (i >= wordsCount) return notify(`No More Attempts`)
+        const wordLetters = letters.slice((i + 0) * wordLength, (i + 1) * wordLength)
+        const word = wordLetters
+          .map(letter => letter.textContent[0])
+          .join('')
+          .toLowerCase()
+        if (!guessesSet.has(word)) return notify(`"${word}" is not a valid word`)
+        ;[i, j] = [i + 1, 0]
+        for (const letter of letters.slice(0, i * wordLength)) letter.classList.toggle('submitted', true)
+        for (let k = 0; k < wordLength; k++) {
+          wordLetters[k].classList.toggle('used', solution.includes(word[k]))
+          wordLetters[k].classList.toggle('correct', solution[k] === word[k])
+          wordLetters[k].toggleAttribute('disabled', true)
+          keyboard.find(key => key.textContent[0].toLowerCase() === word[k])?.classList.toggle('used', true)
+        }
+        if (i >= wordsCount) return notify(`You Lose! The word was "${solution}"`)
+        if (word !== solution) return
+        ;[i, j] = [wordsCount, 0]
+        return notify(`You Win!`)
+      }
+      /**  */
+      const commandClearHandler = () => {
+        while (i < wordsCount && j > 0) letters[i * wordLength + --j].textContent = ''
+      }
+      /** @param {string} key */
+      const wordKeyHandler = key => {
+        if (i < wordsCount && j < wordLength) letters[i * wordLength + j++].textContent = key.toUpperCase()
+      }
+      /** @param {string} action */
+      const actionKeyHandler = action => {
+        const handler = {
+          Enter: commandSubmitHandler,
+          Delete: commandClearHandler,
+          Backspace: () => {
+            if (j > 0) letters[i * wordLength + --j].textContent = ''
+          },
+        }[action]
+        if (typeof handler === 'function') handler()
+      }
+      /** @param {string} input */
+      const onInput = input => {
+        for (const [test, call] of [
+          [
+            /^command:(\w+)$/,
+            matches => {
+              const handler = { Submit: commandSubmitHandler, Clear: commandClearHandler }[matches[1]]
+              if (!(typeof handler === 'function')) throw new Error(`Unknown command: "${input}"`)
+              handler()
+            },
+          ],
+          [/^key:([a-zA-Z])$/, matches => wordKeyHandler(matches[1])],
+          [/^key:(\w+)$/, matches => actionKeyHandler(matches[1])],
+          [/^key:(←)$/, matches => actionKeyHandler('Backspace')],
+        ]) {
+          const matches = input.match(test)
+          if (matches) return call(matches)
+        }
+      }
+
+      // Single Assign Event Handlers
+      function generalButtonOnClick(event) {
+        if (!(event instanceof PointerEvent)) throw new Error('Not a PointerEvent')
+        if (!(event.target instanceof HTMLButtonElement)) throw new Error('Not from a <button>')
+        const buttonBehavior = event.target.textContent
+        const onCommand = {
+          Submit: () => onInput('command:Submit'),
+          Clear: () => onInput('command:Clear'),
+          Reset: () => onInput('command:Reset'),
+        }[buttonBehavior]
+        if (typeof onCommand === 'function') onCommand()
+        else onInput(`key:${buttonBehavior}`)
+      }
+      function documentOnKey(event) {
+        if (!(event instanceof KeyboardEvent)) throw new Error('Not a KeyboardEvent')
+        onInput(`key:${event.key}`)
+      }
+    </script>
+  </head>
+  <body>
+    <div id="wordle">
+      <div class="border">
+        <header>Guess the Word</header>
+        <span class="notify">Guess the Word</span>
+        <ol class="letters" data-active-word-index="3">
+          <li class="loader">Loading Words</li>
+        </ol>
+        <footer>
+          <button>Submit</button>
+          <button>Clear</button>
+          <div class="keyboard">
+            <div class="loader">Loading Keyboard</div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>
