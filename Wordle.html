@@ -75,10 +75,10 @@
           &.submitted {
             background-color: color-mix(in srgb, var(--pallet-1) 80%, black);
           }
-          &.used {
+          &.submitted.used {
             background-color: var(--pallet-used);
           }
-          &.used.correct {
+          &.submitted.used.correct {
             background-color: var(--pallet-correct);
           }
         }
@@ -162,18 +162,17 @@
         const words = rows.map(row => row[wordHeaderIndex]).filter(Boolean)
         return words
       }
-      const [guesses, solutions, ..._] = await Promise.all([
-        fetchWords('data/wordle/guesses.csv'),
-        fetchWords('data/wordle/solutions.csv'),
+      const [words, ..._] = await Promise.all([
+        fetchWords('data/wordle/words.csv'),
         firstTimePopulateDOM(),
         DOMContentLoaded,
       ])
-      const guessesSet = new Set(guesses)
+      const wordsSet = new Set(words)
       const getRandomSolution = () => {
-        const solution = solutions[Math.floor(Math.random() * solutions.length)]
-        if (!guessesSet.has(solution)) {
+        const solution = words[Math.floor(Math.random() * words.length)]
+        if (!wordsSet.has(solution)) {
           guesses.push(solution)
-          guessesSet.add(solution)
+          wordsSet.add(solution)
         }
         return solution
       }
@@ -184,10 +183,11 @@
       const keyboard = [...document.querySelectorAll('#wordle .keyboard .key')] //
         .filter(button => button instanceof HTMLButtonElement)
       const solution = getRandomSolution()
-      let [i, j] = [0, 0]
+      let [i, j, result] = [0, 0, '']
+      console.debug({ words, peekSolution: () => solution })
 
       // Game Behavior
-      letters.forEach(letter => (letter.textContent = ''))
+      for (const letter of letters) letter.textContent = ''
       let notifyTimeout
       const notify = message => {
         const notify = document.querySelector('#wordle .notify')
@@ -203,6 +203,7 @@
       }
       notify('Guess The Word')
       const commandSubmitHandler = () => {
+        if (result) return notify(`Game is over: You ${result}`)
         if (j < wordLength) return notify(`Word is not complete`)
         if (i >= wordsCount) return notify(`No More Attempts`)
         const wordLetters = letters.slice((i + 0) * wordLength, (i + 1) * wordLength)
@@ -210,7 +211,7 @@
           .map(letter => letter.textContent[0])
           .join('')
           .toLowerCase()
-        if (!guessesSet.has(word)) return notify(`"${word}" is not a valid word`)
+        if (!wordsSet.has(word)) return notify(`"${word}" is not a valid word`)
         ;[i, j] = [i + 1, 0]
         for (const letter of letters.slice(0, i * wordLength)) letter.classList.toggle('submitted', true)
         for (let k = 0; k < wordLength; k++) {
@@ -219,10 +220,14 @@
           wordLetters[k].toggleAttribute('disabled', true)
           keyboard.find(key => key.textContent[0].toLowerCase() === word[k])?.classList.toggle('used', true)
         }
-        if (i >= wordsCount) return notify(`You Lose! The word was "${solution}"`)
-        if (word !== solution) return
-        ;[i, j] = [wordsCount, 0]
-        return notify(`You Win!`)
+        if (word === solution) {
+          ;[i, j, result] = [wordsCount, 0, 'won']
+          return notify(`You Win!`)
+        }
+        if (i >= wordsCount) {
+          ;[i, j, result] = [wordsCount, 0, 'lost']
+          return notify(`You Lose! The word was "${solution}"`)
+        }
       }
       /**  */
       const commandClearHandler = () => {
