@@ -148,36 +148,63 @@
       }
     </style>
     <script type="module">
-      const DOMContentLoaded = new Promise(resolve =>
-        document.readyState !== 'loading'
-          ? resolve()
-          : document.addEventListener('DOMContentLoaded', resolve, { once: true }),
-      )
       const wordLength = 5
       const wordsCount = 6
-      const firstTimePopulateDOM = async () => {
+
+      const DOMContentLoaded = (async () => {
+        await new Promise(resolve =>
+          document.readyState !== 'loading'
+            ? resolve()
+            : document.addEventListener('DOMContentLoaded', resolve, { once: true }),
+        )
+      })()
+      const DOMPopulated = (async () => {
         await DOMContentLoaded
-        document.querySelector('#wordle .letters').replaceChildren(
-          ...Array.from({ length: wordsCount }).flatMap((c, i) => {
-            const li = document.createElement('li')
-            li.className = 'letter'
-            li.innerText = 'WORDLE'[i] || ''
-            return Array.from({ length: wordLength }, () => li.cloneNode(true))
-          }),
-        )
-        document.querySelector('#wordle .keyboard').replaceChildren(
-          ...Array.from('qwertyuiop asdfghjkl zxcvbnm←'.toUpperCase(), c => {
-            if (c === ' ') return
-            const btn = document.createElement('button')
-            btn.innerText = c
-            return btn
-          }).filter(Boolean),
-        )
+        const mobileInput = (() => {
+          const input = document.createElement('input')
+          input.id = 'mobile-input'
+          input.type = 'text'
+          input.autocomplete = 'off'
+          input.autocorrect = false
+          input.spellcheck = false
+          input.style = 'position:absolute; opacity:0; width:0; height:0; pointer-events:none;'
+          input.addEventListener('keydown', mobileInputOnKey)
+          document.body.prepend(input)
+          return input
+        })()
+        document.querySelectorAll('#wordle .letters').forEach(div => {
+          div.replaceChildren(
+            ...Array.from({ length: wordsCount }).flatMap((c, i) => {
+              const li = document.createElement('li')
+              li.className = 'letter'
+              li.innerText = 'WORDLE'[i] || ''
+              return Array.from({ length: wordLength }, () => li.cloneNode(true)) //
+                .filter(li => li instanceof HTMLLIElement)
+            }),
+          )
+        })
+        document.querySelectorAll('#wordle .keyboard').forEach(div => {
+          div.replaceChildren(
+            ...Array.from('qwertyuiop asdfghjkl zxcvbnm←'.toUpperCase(), c => {
+              if (/^\s$/.test(c)) return
+              const btn = document.createElement('button')
+              btn.innerText = c
+              return btn
+            }).filter(Boolean),
+          )
+        })
         document.querySelectorAll('#wordle button').forEach(btn => {
           btn.addEventListener('click', generalButtonOnClick)
         })
-        document.addEventListener('keydown', documentOnKey)
-      }
+        document.querySelectorAll('#wordle').forEach(div => {
+          div.addEventListener('click', () => {
+            const input = document.querySelector('input#mobile-input')
+            if (!(input instanceof HTMLInputElement)) throw new Error('missing <input id="mobile-input">')
+            input.focus({ preventScroll: true })
+          })
+        })
+        mobileInput.focus()
+      })()
       /** @param {Url} url */
       const fetchWords = async url => {
         const response = await fetch(url)
@@ -188,11 +215,7 @@
         const words = rows.map(row => row[wordHeaderIndex]).filter(Boolean)
         return new Set(words)
       }
-      const [words, ..._] = await Promise.all([
-        fetchWords('data/wordle/words.csv'),
-        firstTimePopulateDOM(),
-        DOMContentLoaded,
-      ])
+      const [words, ..._] = await Promise.all([fetchWords('data/wordle/words.csv'), DOMPopulated])
 
       const makeWordleGame = (wordleDivId = 'wordle') => ({
         words,
@@ -214,6 +237,7 @@
                 .toLowerCase()
         },
         set word(word) {
+          word = `${word}`.toLowerCase()
           if (this.gameOver) throw new Error(`wordle.word = "${word}" is disallow after game-over`)
           const { wordLetters } = this
           if (!(/^[a-zA-Z]*$/.test(word) && word.length <= wordLetters.length))
@@ -265,7 +289,7 @@
           if (gameOver) return this.notify(`You ${result}! Solution was "${solution}"`)
           const { word, wordLength, words } = this
           if (word.length < wordLength || !words.has(word))
-            return this.notify(`"${word.padEnd(wordLength, '.')}"" is not a valid word`)
+            return this.notify(`"${word.padEnd(wordLength, '.')}" is not a valid word`)
 
           const { wordLetters, keyboardKeys } = this
           const i = (this.i += 1) // Word accepted
@@ -295,6 +319,23 @@
       const wordle = makeWordleGame()
       wordle.reset()
 
+      /** @param {string} key */
+      const onKey = key => {
+        /**/ if (/^([a-zA-Z])$/.test(key)) {
+          const { gameOver, word, wordLength } = wordle
+          if (!gameOver && word.length < wordLength) {
+            wordle.word = word + key[0]
+          }
+        } //
+        else if (/^(Enter)$/.test(key)) {
+          if (wordle.gameOver) wordle.reset()
+          else wordle.submit()
+        } //
+        else if (/^(Backspace|←)$/.test(key)) {
+          const { gameOver, word } = wordle
+          if (!gameOver && word) wordle.word = word.substr(0, word.length - 1)
+        } //
+      }
       function generalButtonOnClick(event) {
         if (!(event instanceof PointerEvent)) throw new Error('Not a PointerEvent')
         if (!(event.target instanceof HTMLButtonElement)) throw new Error('Not from a <button>')
@@ -304,32 +345,16 @@
           clear: () => wordle.gameOver || (wordle.word = ''),
           reset: () => wordle.reset(),
         }[buttonBehavior]
-        if (command) return command()
-        if (/^[a-z]$/.test(buttonBehavior)) {
-          const { gameOver, word, wordLength } = wordle
-          if (!gameOver && word.length < wordLength) {
-            wordle.word = wordle.word + buttonBehavior[0]
-          }
-        }
-        if (/^←$/.test(buttonBehavior)) {
-          if (!wordle.gameOver) wordle.word = ''
-        }
+        if (command) command()
+        else onKey(buttonBehavior)
       }
-      function documentOnKey(event) {
-        if (!(event instanceof KeyboardEvent)) throw new Error('Not a KeyboardEvent')
-        if (/^[a-zA-z]$/.test(event.key)) {
-          const { gameOver, word, wordLength } = wordle
-          if (!gameOver && word.length < wordLength) {
-            wordle.word = wordle.word + event.key[0]
-          }
-        }
-        if (/^Enter$/.test(event.key)) {
-          if (wordle.gameOver) wordle.reset()
-          else wordle.submit()
-        }
-        if (/^Backspace$/.test(event.key)) {
-          const { gameOver, word } = wordle
-          if (!gameOver && word) wordle.word = word.substr(0, word.length - 1)
+      function mobileInputOnKey(event) {
+        if (!(event instanceof KeyboardEvent)) throw new Error('bad event type')
+        if (!(event.target instanceof HTMLInputElement)) throw new Error('bad event target')
+        if (/^(Enter|Backspace|[a-zA-Z])$/.test(event.key)) {
+          event.target.value = ''
+          event.preventDefault()
+          onKey(event.key)
         }
       }
     </script>
@@ -338,7 +363,7 @@
     <div id="wordle">
       <div class="border">
         <header>Guess the Word</header>
-        <ol class="letters" data-active-word-index="3">
+        <ol class="letters">
           <li class="loader">Loading Words</li>
         </ol>
         <div class="notify">Guess the Word</div>
