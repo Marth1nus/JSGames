@@ -5,6 +5,7 @@
   "browserslist": [
     "defaults",
     "not ie 11",
+    "not chrome <= 111",
     "not chrome <= 109"
   ]
 }

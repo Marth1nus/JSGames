@@ -1,5 +1,5 @@
 <!-- @format -->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -85,7 +85,7 @@
           const nextImage = async () => {
             this.dom.icon.replaceChildren(
               imgs[imageIndex++] ?? //
-                imgs[(imageIndex = 0)]
+                imgs[(imageIndex = 0)],
             )
             setTimeout(nextImage, 4000)
           }
@@ -140,19 +140,20 @@
               overlay.style.justifyContent = 'center'
               overlay.style.zIndex = 1000
               const button = document.createElement('button')
-              button.textContent = 'Click to Start'
+              button.textContent = 'Music Currently Missing'
               button.style.padding = '1em 2em'
               button.style.fontSize = '2em'
               button.style.border = 'none'
               button.style.borderRadius = '0.5em'
               button.style.backgroundColor = 'pink'
               button.style.cursor = 'pointer'
-              button.addEventListener('click', () =>
+              button.addEventListener('click', () => {
                 music.wiiShopping
                   .play()
                   .then(() => overlay.remove())
                   .catch(console.error)
-              )
+                overlay.remove()
+              })
               overlay.appendChild(button)
               document.body.appendChild(overlay)
             })

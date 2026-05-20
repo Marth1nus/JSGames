@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSGames</title>
+    <style>
+      body {
+        & /* Styles */ {
+          display: grid;
+          grid-template: auto 1fr / 1fr;
+          width: 99vw;
+          height: 98vh;
+        }
+        & > nav {
+          & /* Styles */ {
+            display: grid;
+            grid-template: 1fr / 1fr 9fr;
+            grid-auto-flow: column;
+            align-content: center;
+            text-align: center;
+          }
+          & > * {
+            & /* Styles */ {
+              align-content: center;
+              background: linear-gradient(transparent 50%, currentColor 200%);
+              border: 0.1em inset currentColor;
+            }
+            &:nth-child(2n + 1) {
+              border-radius: 8em 3em 3em 8em;
+              margin-left: 0.5em;
+            }
+            &:nth-child(2n + 2) {
+              border-radius: 3em 8em 8em 3em;
+              margin-right: 0.5em;
+            }
+          }
+          & > ol.games {
+            & /* Styles */ {
+              display: grid;
+              position: relative;
+              grid-template: 1fr / 1fr 1fr 1fr 1fr;
+              overflow: hidden;
+              padding: 0.1em;
+              margin: 0;
+              gap: 0.1em;
+            }
+            /* prettier-ignore */
+            & /* --index */ {
+            &:has(#Minesweeper:target) { --index: 0; }
+            &:has(#Valentine:target) { --index: 1; }
+            &:has(#Solitaire:target) { --index: 2; }
+            &:has(#Wordle:target) { --index: 3; } 
+          }
+            &::before {
+              content: '';
+              position: absolute;
+              pointer-events: none;
+              width: calc(100% / 4);
+              height: 100%;
+              background: radial-gradient(currentColor -200%, transparent 150%);
+              border-radius: 2em 1em 2em 1em;
+              border: 0.1em solid #0002;
+              transform: translateX(calc(var(--index) * 100%));
+              transition: transform 1s ease;
+            }
+            & > li {
+              & /* Styles */ {
+                list-style-position: inside;
+                transition: all;
+                padding: 0.2em;
+              }
+              & > a {
+                text-decoration: none;
+                color: inherit;
+              }
+              &:target > a {
+                text-decoration: underline;
+              }
+            }
+          }
+        }
+        & > main > iframe {
+          width: 100%;
+          height: 100%;
+        }
+      }
+    </style>
+    <script type="module">
+      document.addEventListener('DOMContentLoaded', onDOMContentLoaded, { once: true })
+      function onDOMContentLoaded() {
+        for (const li of document.querySelectorAll('nav ol.games li')) {
+          li.addEventListener('click', () => li.querySelector('a').click())
+        }
+        for (const a of document.querySelectorAll('nav ol.games li a')) {
+          a.addEventListener('click', onNavLinkClick)
+        }
+        document.querySelector(`nav ol.games li${location.hash} a`).click()
+      }
+      /** @param {PointerEvent} event */
+      function onNavLinkClick(event) {
+        setTimeout(() => {
+          const iframe = document.querySelector('iframe')
+          if (!(iframe instanceof HTMLIFrameElement)) throw new Error('iframe not found')
+          iframe.src = `${location.hash.substring(1)}.html`
+        }, 1)
+      }
+    </script>
+  </head>
+  <body>
+    <nav>
+      <strong>
+        <a href="https://github.com/Marth1nus/JSGames">JSGames</a>
+      </strong>
+      <ol class="games">
+        <li id="Minesweeper"><a href="#Minesweeper">Minesweeper</a></li>
+        <li id="Valentine"><a href="#Valentine">Valentine</a></li>
+        <li id="Solitaire"><a href="#Solitaire">Solitaire</a></li>
+        <li id="Wordle"><a href="#Wordle">Wordle</a></li>
+      </ol>
+    </nav>
+    <main>
+      <iframe title="app" frameborder="0"></iframe>
+    </main>
+  </body>
+</html>
